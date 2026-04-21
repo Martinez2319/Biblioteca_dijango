@@ -1,0 +1,433 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+.dashboard-page {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+}
+
+.dashboard-header {
+    margin-bottom: 2rem;
+}
+
+.dashboard-header h1 {
+    margin-bottom: 0.5rem;
+}
+
+.dashboard-header p {
+    color: var(--text-muted);
+}
+
+/* Stats Grid */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: all var(--transition);
+}
+
+.stat-card:hover {
+    box-shadow: var(--shadow-md);
+}
+
+.stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.stat-icon.books { background: var(--accent-light); }
+.stat-icon.users { background: rgba(16, 185, 129, 0.1); }
+.stat-icon.categories { background: rgba(245, 158, 11, 0.1); }
+.stat-icon.remote { background: rgba(139, 92, 246, 0.1); }
+
+.stat-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.stat-label {
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+}
+
+/* Tab Header */
+.tab-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.tab-header input {
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 0.9375rem;
+    width: 100%;
+    max-width: 280px;
+}
+
+/* Action Buttons in Table */
+.action-btns {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-icon-sm {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: var(--radius-sm);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.875rem;
+    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.btn-icon-sm:hover {
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+}
+
+.btn-icon-sm.danger:hover {
+    border-color: var(--danger);
+    color: var(--danger);
+    background: rgba(239, 68, 68, 0.1);
+}
+
+/* Remote Section */
+.remote-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.remote-card h3 {
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 9999px;
+}
+
+.status-badge.online {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success);
+}
+
+.status-badge.offline {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--danger);
+}
+
+.remote-help {
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+    padding: 1.25rem;
+    margin-top: 1.5rem;
+}
+
+.remote-help h4 {
+    margin-bottom: 0.75rem;
+    font-size: 0.9375rem;
+}
+
+.remote-help ul {
+    list-style: none;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.remote-help li {
+    padding: 0.375rem 0;
+}
+
+/* Format Badge */
+.format-badge {
+    display: inline-flex;
+    gap: 0.25rem;
+}
+
+@media (max-width: 768px) {
+    .dashboard-page {
+        padding: 1.5rem 1rem;
+    }
+    
+    .tab-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .tab-header input {
+        max-width: none;
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-page" data-testid="dashboard">
+    <div class="dashboard-header">
+        <h1>Panel de Administración</h1>
+        <p>Gestiona libros, categorías y usuarios</p>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon books">📚</div>
+            <div>
+                <div class="stat-value" id="totalBooks" data-testid="stat-books">0</div>
+                <div class="stat-label">Libros</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon users">👥</div>
+            <div>
+                <div class="stat-value" id="totalUsers" data-testid="stat-users">0</div>
+                <div class="stat-label">Usuarios</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon categories">📂</div>
+            <div>
+                <div class="stat-value" id="totalCategories" data-testid="stat-categories">0</div>
+                <div class="stat-label">Categorías</div>
+            </div>
+        </div>
+        <div class="stat-card" id="pcStatusCard">
+            <div class="stat-icon remote">🖥️</div>
+            <div>
+                <div class="stat-value" id="pcStatusValue" data-testid="stat-remote">-</div>
+                <div class="stat-label">PC Remoto</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="tabs">
+        <button class="tab active" data-tab="books" data-testid="tab-books">📚 Libros</button>
+        <button class="tab" data-tab="categories" data-testid="tab-categories">📂 Categorías</button>
+        <button class="tab" data-tab="users" data-testid="tab-users">👥 Usuarios</button>
+        <button class="tab" data-tab="remote" data-testid="tab-remote">🖥️ PC Remoto</button>
+    </div>
+
+    <!-- Books Tab -->
+    <div class="tab-content active" id="books-tab">
+        <div class="tab-header">
+            <input type="text" id="searchBooks" placeholder="Buscar libros..." data-testid="search-books">
+            <button class="btn btn-primary" onclick="openBookModal()" data-testid="add-book-btn">+ Nuevo Libro</button>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Título</th>
+                        <th>Autor</th>
+                        <th>Formato</th>
+                        <th>Vistas</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="booksTable" data-testid="books-table"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Categories Tab -->
+    <div class="tab-content" id="categories-tab">
+        <div class="tab-header">
+            <div></div>
+            <button class="btn btn-primary" onclick="openCategoryModal()" data-testid="add-category-btn">+ Nueva Categoría</button>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Slug</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="categoriesTable" data-testid="categories-table"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Users Tab -->
+    <div class="tab-content" id="users-tab">
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Email</th>
+                        <th>Rol</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="usersTable" data-testid="users-table"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Remote Tab -->
+    <div class="tab-content" id="remote-tab">
+        <div class="remote-card">
+            <h3>🖥️ Estado del PC Remoto</h3>
+            <div id="remoteStatusInfo" data-testid="remote-status">Cargando...</div>
+            <button class="btn btn-secondary mt-2" onclick="loadRemoteStatus()">🔄 Actualizar</button>
+        </div>
+        
+        <div class="remote-card">
+            <h3>📁 Archivos Disponibles</h3>
+            <div id="remoteFilesInfo" data-testid="remote-files">Conecta tu PC para ver los archivos.</div>
+        </div>
+
+        <div class="remote-help">
+            <h4>💡 Cómo usar archivos del PC Remoto</h4>
+            <p style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 0.75rem;">
+                Usa el prefijo <code>remote:</code> seguido del nombre del archivo:
+            </p>
+            <ul>
+                <li><strong>Portada:</strong> <code>remote:mi-libro.jpg</code></li>
+                <li><strong>PDF:</strong> <code>remote:mi-libro.pdf</code></li>
+            </ul>
+            <p style="color: var(--text-muted); font-size: 0.8125rem; margin-top: 0.75rem;">
+                Los archivos deben estar en <code>C:\MisLibros\covers\</code> y <code>C:\MisLibros\pdfs\</code>
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Book Modal -->
+<div class="modal" id="bookModal">
+    <div class="modal-content" style="max-width: 560px;">
+        <div class="modal-header">
+            <h2 id="bookModalTitle">Nuevo Libro</h2>
+            <button class="modal-close" onclick="closeBookModal()">&times;</button>
+        </div>
+        <form id="bookForm">
+            <input type="hidden" id="bookId">
+            <div class="form-group">
+                <label>Título *</label>
+                <input type="text" id="bookTitle" required data-testid="book-form-title">
+            </div>
+            <div class="form-group">
+                <label>Autor *</label>
+                <input type="text" id="bookAuthor" required data-testid="book-form-author">
+            </div>
+            <div class="form-group">
+                <label>Descripción</label>
+                <textarea id="bookDesc" rows="2" data-testid="book-form-desc"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Categorías (separadas por coma)</label>
+                <input type="text" id="bookCategories" placeholder="Ficción, Romance" data-testid="book-form-categories">
+            </div>
+            <div class="form-group">
+                <label>URL Portada</label>
+                <input type="text" id="bookCover" placeholder="remote:portada.jpg o URL" data-testid="book-form-cover">
+            </div>
+            <div class="form-group">
+                <label>URL del PDF</label>
+                <input type="text" id="bookPdf" placeholder="remote:libro.pdf o URL" data-testid="book-form-pdf">
+            </div>
+            <div class="form-group">
+                <label>Contenido (texto)</label>
+                <textarea id="bookContent" rows="6" placeholder="Texto del libro..." data-testid="book-form-content"></textarea>
+            </div>
+            <div class="form-group" style="border-top: 1px solid var(--border-color); padding-top: 1rem; margin-top: 1rem;">
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                    <input type="checkbox" id="bookIsPremium" onchange="togglePremiumPrice()" data-testid="book-form-premium">
+                    <span>📦 Libro Premium (de pago)</span>
+                </label>
+            </div>
+            <div class="form-group" id="priceGroup" style="display: none;">
+                <label>Precio (USD)</label>
+                <input type="number" id="bookPrice" min="0.99" step="0.01" placeholder="9.99" data-testid="book-form-price">
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeBookModal()">Cancelar</button>
+                <button type="submit" class="btn btn-primary" data-testid="book-form-submit">Guardar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Category Modal -->
+<div class="modal" id="categoryModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="categoryModalTitle">Nueva Categoría</h2>
+            <button class="modal-close" onclick="closeCategoryModal()">&times;</button>
+        </div>
+        <form id="categoryForm">
+            <input type="hidden" id="categoryId">
+            <div class="form-group">
+                <label>Nombre</label>
+                <input type="text" id="categoryName" required data-testid="category-form-name">
+            </div>
+            <div class="form-group">
+                <label>Slug</label>
+                <input type="text" id="categorySlug" required data-testid="category-form-slug">
+            </div>
+            <div class="form-group">
+                <label>Descripción</label>
+                <textarea id="categoryDesc" rows="2" data-testid="category-form-desc"></textarea>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeCategoryModal()">Cancelar</button>
+                <button type="submit" class="btn btn-primary" data-testid="category-form-submit">Guardar</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/dashboard.js' %}"></script>
+{% endblock %}
+

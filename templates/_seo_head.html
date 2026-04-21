@@ -1,0 +1,24 @@
+{% load seo_tags %}
+{# Parcial SEO reutilizable para templates que NO extienden base.html.
+   Renderiza todos los meta tags principales + JSON-LD a partir de `seo`. #}
+<title>{{ seo.meta_title|default:SITE_NAME }}</title>
+<meta name="description" content="{{ seo.meta_description }}">
+{% if seo.meta_keywords %}<meta name="keywords" content="{{ seo.meta_keywords }}">{% endif %}
+<meta name="robots" content="{{ seo.meta_robots|default:'index, follow' }}">
+<meta name="author" content="{{ SITE_NAME }}">
+<meta name="theme-color" content="#4f46e5">
+{% if seo.canonical_url %}<link rel="canonical" href="{{ seo.canonical_url }}">{% endif %}
+<meta property="og:site_name" content="{{ SITE_NAME }}">
+<meta property="og:type" content="{{ seo.og_type|default:'website' }}">
+<meta property="og:title" content="{{ seo.meta_title|default:SITE_NAME }}">
+<meta property="og:description" content="{{ seo.meta_description }}">
+{% if seo.canonical_url %}<meta property="og:url" content="{{ seo.canonical_url }}">{% endif %}
+{% if seo.meta_image %}<meta property="og:image" content="{{ seo.meta_image }}">{% endif %}
+<meta property="og:locale" content="es_ES">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ seo.meta_title|default:SITE_NAME }}">
+<meta name="twitter:description" content="{{ seo.meta_description }}">
+{% if seo.meta_image %}<meta name="twitter:image" content="{{ seo.meta_image }}">{% endif %}
+{% for data in seo.jsonld %}
+<script type="application/ld+json">{{ data|jsonld_script|safe }}</script>
+{% endfor %}

@@ -1,0 +1,7 @@
+{
+  "serverUrl": "http://127.0.0.1:8000",
+  "apiKey": "MiBiblioteca2024SecretKey_AbCdEfGh",
+  "booksFolder": "C:/MisLibros",
+  "localPort": 3001,
+  "pcName": "PC de Daniel"
+}

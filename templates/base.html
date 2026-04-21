@@ -1,0 +1,165 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    {# Meta SEO: todas las páginas reciben `seo` desde core.views #}
+    <title>{% block title %}{{ seo.meta_title|default:SITE_NAME }}{% endblock %}</title>
+
+    <meta name="description" content="{% block meta_description %}{{ seo.meta_description }}{% endblock %}">
+    {% if seo.meta_keywords %}<meta name="keywords" content="{{ seo.meta_keywords }}">{% endif %}
+    <meta name="robots" content="{% block meta_robots %}{{ seo.meta_robots|default:'index, follow' }}{% endblock %}">
+    <meta name="author" content="{{ SITE_NAME }}">
+    <meta name="theme-color" content="#4f46e5">
+
+    {% block canonical %}{% if seo.canonical_url %}<link rel="canonical" href="{{ seo.canonical_url }}">{% endif %}{% endblock %}
+
+    {# Open Graph #}
+    <meta property="og:site_name" content="{{ SITE_NAME }}">
+    <meta property="og:type" content="{{ seo.og_type|default:'website' }}">
+    <meta property="og:title" content="{{ seo.meta_title|default:SITE_NAME }}">
+    <meta property="og:description" content="{{ seo.meta_description }}">
+    {% if seo.canonical_url %}<meta property="og:url" content="{{ seo.canonical_url }}">{% endif %}
+    {% if seo.meta_image %}<meta property="og:image" content="{{ seo.meta_image }}">{% endif %}
+    <meta property="og:locale" content="es_ES">
+
+    {# Twitter Cards #}
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ seo.meta_title|default:SITE_NAME }}">
+    <meta name="twitter:description" content="{{ seo.meta_description }}">
+    {% if seo.meta_image %}<meta name="twitter:image" content="{{ seo.meta_image }}">{% endif %}
+
+    {# Datos estructurados JSON-LD #}
+    {% load seo_tags %}{% for data in seo.jsonld %}
+    <script type="application/ld+json">{{ data|jsonld_script|safe }}</script>
+    {% endfor %}
+
+    {% block extra_meta %}{% endblock %}
+
+    {# ================== Fuentes y CSS ================== #}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<!-- Botpress Webchat -->
+<script src="https://cdn.botpress.cloud/webchat/v3.6/inject.js"></script>
+<script src="https://files.bpcontent.cloud/2026/03/06/05/20260306052011-BLL4JDG8.js"></script>
+<body>
+    <script>
+        // Patch global: todos los fetch same-origin envian cookies automaticamente.
+        // Esto evita que cada llamada tenga que poner { credentials: 'include' }.
+        (function() {
+            const _origFetch = window.fetch;
+            window.fetch = function(input, init) {
+                init = init || {};
+                if (init.credentials === undefined) {
+                    init.credentials = 'same-origin';
+                }
+                return _origFetch.call(this, input, init);
+            };
+        })();
+    </script>
+    <nav class="navbar">
+        <div class="navbar-content">
+            <a href="/" class="logo" data-testid="logo">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                </svg>
+                <span>{{ SITE_NAME }}</span>
+            </a>
+            <div class="nav-links">
+                <a href="/" data-testid="nav-home">Inicio</a>
+                <a href="/catalog" data-testid="nav-catalog">Catálogo</a>
+                <a href="/subscription" data-testid="nav-subscription" class="premium-link">⭐ Premium</a>
+                <a href="#" id="donateBtn" data-testid="nav-donate">Donar</a>
+                <span id="authLinks">
+                    <a href="/login" data-testid="nav-login">Iniciar Sesión</a>
+                    <a href="/register" class="btn btn-primary btn-sm" data-testid="nav-register">Registrarse</a>
+                </span>
+                <span id="userMenu" style="display:none;">
+                    <a href="/my-library" id="libraryLink" data-testid="nav-library">Mi Biblioteca</a>
+                    <a href="/dashboard" id="adminLink" style="display:none;" data-testid="nav-admin">Panel</a>
+                    <span id="userName" data-testid="user-name"></span>
+                    <a href="#" id="logoutBtn" data-testid="logout-btn">Salir</a>
+                </span>
+                <button class="theme-toggle" id="themeToggle" data-testid="theme-toggle" aria-label="Cambiar tema">
+                    <svg class="sun-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="5"/>
+                        <line x1="12" y1="1" x2="12" y2="3"/>
+                        <line x1="12" y1="21" x2="12" y2="23"/>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                        <line x1="1" y1="12" x2="3" y2="12"/>
+                        <line x1="21" y1="12" x2="23" y2="12"/>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                    </svg>
+                    <svg class="moon-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                    </svg>
+                </button>
+                <!-- Notification Bell -->
+                <button class="notification-btn" id="notificationBtn" style="display:none;" data-testid="notification-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                    </svg>
+                    <span class="notification-badge" id="notificationBadge" style="display:none;">0</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+        <p>&copy; 2024 {{ SITE_NAME }} - Django Edition</p>
+    </footer>
+
+    <!-- Modal de donación -->
+    <div class="modal" id="donateModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Apoya la Biblioteca</h2>
+                <button class="modal-close" onclick="closeDonateModal()">&times;</button>
+            </div>
+            <p class="modal-desc">Tu donación nos ayuda a mantener y mejorar este proyecto.</p>
+            <div class="amount-btns">
+                <button class="btn btn-outline" onclick="setAmount(5)">$5</button>
+                <button class="btn btn-outline" onclick="setAmount(10)">$10</button>
+                <button class="btn btn-outline" onclick="setAmount(25)">$25</button>
+            </div>
+            <div class="form-group">
+                <label>Monto personalizado</label>
+                <input type="number" id="donateAmount" value="10" min="1" data-testid="donate-amount">
+            </div>
+            <button class="btn btn-primary btn-full" onclick="renderPaypal()" data-testid="donate-submit">Donar con PayPal</button>
+            <div id="paypalButtons"></div>
+        </div>
+    </div>
+
+    <!-- Notification Panel -->
+    <div class="notification-panel" id="notificationPanel">
+        <div class="notification-header">
+            <h3>Notificaciones</h3>
+            <button onclick="markAllRead()" class="mark-read-btn">Marcar todo leído</button>
+        </div>
+        <div class="notification-list" id="notificationList">
+            <p class="no-notifications">No tienes notificaciones</p>
+        </div>
+    </div>
+
+    <link rel="stylesheet" href="{% static 'css/notifications.css' %}">
+
+    <script src="{% static 'js/common.js' %}"></script>
+    <script src="{% static 'js/notifications.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,1338 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lector - Biblioteca Virtual</title>
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="description" content="Lector de libros online - Biblioteca Virtual.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&family=Merriweather:wght@300;400&family=Lora:wght@400;500&family=Crimson+Text:wght@400;600&family=Source+Serif+Pro:wght@400;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <style>
+        :root, [data-theme="light"] {
+            --bg-primary: #fafbfc;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #f4f6f8;
+            --text-primary: #1a1d21;
+            --text-secondary: #4a5568;
+            --text-muted: #718096;
+            --accent-primary: #4f46e5;
+            --accent-light: #e0e7ff;
+            --border-color: #e2e8f0;
+        }
+        
+        [data-theme="dark"] {
+            --bg-primary: #0f1117;
+            --bg-secondary: #1a1d24;
+            --bg-tertiary: #252a33;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --accent-primary: #818cf8;
+            --accent-light: #312e81;
+            --border-color: #2d3748;
+        }
+        
+        [data-theme="sepia"] {
+            --bg-primary: #f4ecd8;
+            --bg-secondary: #faf6eb;
+            --bg-tertiary: #ebe5d3;
+            --text-primary: #433422;
+            --text-secondary: #5c4a35;
+            --text-muted: #7a6548;
+            --accent-primary: #8b6914;
+            --accent-light: #f0e6c8;
+            --border-color: #d4c9a8;
+        }
+
+        /* Ocultar controles de Google Drive */
+        #pdfViewer iframe {
+            pointer-events: auto;
+        }
+
+        .drive-overlay {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 60px;
+            height: 60px;
+            background: var(--bg-tertiary);
+            z-index: 10;
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            transition: background 0.2s, color 0.2s;
+            overflow: hidden;
+        }
+        
+        .reader-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.75rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+        }
+        
+        .reader-header a {
+            color: var(--text-muted);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+        
+        .reader-header a:hover { color: var(--accent-primary); }
+        
+        .book-title { text-align: center; }
+        .book-title h1 { font-size: 1rem; font-weight: 600; }
+        .book-title p { font-size: 0.75rem; color: var(--text-muted); }
+        
+        .controls {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        
+        .controls button {
+            width: 36px;
+            height: 36px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            cursor: pointer;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        
+        .controls button:hover {
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+        }
+        
+        .controls button:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .page-info {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            min-width: 80px;
+            text-align: center;
+        }
+        
+        .zoom-info {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            min-width: 50px;
+            text-align: center;
+        }
+        
+        .format-toggle {
+            display: none;
+            justify-content: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: var(--bg-tertiary);
+            position: fixed;
+            top: 60px;
+            left: 0;
+            right: 0;
+            z-index: 50;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .format-toggle.visible { display: flex; }
+        
+        .format-toggle button {
+            padding: 0.75rem 1.5rem;
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .format-toggle button:hover { border-color: var(--accent-primary); }
+        .format-toggle button.active {
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+            color: white;
+        }
+        
+        .pdf-container {
+            position: fixed;
+            top: 60px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            overflow: auto;
+            background: var(--bg-tertiary);
+            display: none;
+        }
+        
+        .pdf-container.has-toggle { top: 120px; }
+        
+        .pdf-container.active { display: block; }
+        
+        #pdfViewer {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1rem;
+            gap: 1rem;
+        }
+        
+        #pdfViewer canvas {
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            background: white;
+        }
+        
+        .content-text {
+            max-width: 66%;
+            margin: 0 auto;
+            padding: 2rem 3rem;
+            line-height: 2;
+            font-size: 18px;
+            display: none;
+            position: fixed;
+            top: 60px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            overflow: auto;
+            background: var(--bg-primary);
+        }
+        
+        .content-text.has-toggle { top: 120px; }
+        
+        .content-text.active { display: block; }
+        
+        .content-text p {
+            margin-bottom: 1.5rem;
+            text-indent: 2rem;
+        }
+        
+        /* Font families */
+        .font-merriweather { font-family: 'Merriweather', Georgia, serif; }
+        .font-lora { font-family: 'Lora', Georgia, serif; }
+        .font-crimson { font-family: 'Crimson Text', Georgia, serif; }
+        .font-source { font-family: 'Source Serif Pro', Georgia, serif; }
+        .font-outfit { font-family: 'Outfit', sans-serif; }
+        
+        .no-content {
+            text-align: center;
+            padding: 6rem 2rem;
+            margin-top: 60px;
+            color: var(--text-muted);
+        }
+        
+        .no-content svg { width: 64px; height: 64px; margin-bottom: 1rem; opacity: 0.5; }
+        .no-content h2 { margin-bottom: 0.5rem; color: var(--text-primary); }
+        
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 4rem;
+            color: var(--text-muted);
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--accent-primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+        
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        /* Settings Panel */
+        .settings-panel {
+            position: fixed;
+            top: 60px;
+            right: -320px;
+            width: 300px;
+            height: calc(100vh - 60px);
+            background: var(--bg-secondary);
+            border-left: 1px solid var(--border-color);
+            padding: 1.5rem;
+            transition: right 0.3s;
+            z-index: 99;
+            overflow-y: auto;
+        }
+        
+        .settings-panel.open { right: 0; }
+        
+        .settings-panel h3 {
+            font-size: 1rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .setting-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .setting-group label {
+            display: block;
+            font-size: 0.8125rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+        
+        .setting-options {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .setting-btn {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 0.8125rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .setting-btn:hover { border-color: var(--accent-primary); }
+        .setting-btn.active {
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+            color: white;
+        }
+        
+        .theme-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid var(--border-color);
+        }
+        
+        .theme-btn.light { background: #ffffff; }
+        .theme-btn.dark { background: #1a1d24; }
+        .theme-btn.sepia { background: #f4ecd8; }
+        
+        /* Bookmark indicator */
+        .bookmark-btn {
+            position: relative;
+        }
+        
+        .bookmark-btn.has-bookmark::after {
+            content: '';
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 8px;
+            height: 8px;
+            background: var(--accent-primary);
+            border-radius: 50%;
+        }
+        
+        /* Progress saved indicator */
+        .save-indicator {
+            position: fixed;
+            bottom: 1rem;
+            right: 1rem;
+            padding: 0.5rem 1rem;
+            background: var(--accent-primary);
+            color: white;
+            border-radius: 8px;
+            font-size: 0.8125rem;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 1000;
+        }
+        
+        .save-indicator.show { opacity: 1; }
+        
+        /* Notes Panel */
+        .notes-panel {
+            position: fixed;
+            top: 60px;
+            left: -350px;
+            width: 330px;
+            height: calc(100vh - 60px);
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            padding: 1rem;
+            transition: left 0.3s;
+            z-index: 99;
+            overflow-y: auto;
+        }
+        
+        .notes-panel.open { left: 0; }
+        
+        .notes-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .notes-header h3 { font-size: 1rem; }
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-muted);
+        }
+        
+        .note-item {
+            padding: 0.75rem;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            margin-bottom: 0.75rem;
+            border-left: 4px solid var(--accent-primary);
+        }
+        
+        .note-item.yellow { border-left-color: #eab308; background: rgba(234, 179, 8, 0.1); }
+        .note-item.green { border-left-color: #22c55e; background: rgba(34, 197, 94, 0.1); }
+        .note-item.blue { border-left-color: #3b82f6; background: rgba(59, 130, 246, 0.1); }
+        .note-item.pink { border-left-color: #ec4899; background: rgba(236, 72, 153, 0.1); }
+        
+        .note-text {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            font-style: italic;
+            margin-bottom: 0.5rem;
+        }
+        
+        .note-comment {
+            font-size: 0.8125rem;
+            color: var(--text-primary);
+        }
+        
+        .note-meta {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .note-actions button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--text-muted);
+            padding: 0.25rem;
+        }
+        
+        .note-actions button:hover { color: var(--danger); }
+        
+        /* Selection Tooltip */
+        .selection-tooltip {
+            position: absolute;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.5rem;
+            display: flex;
+            gap: 0.25rem;
+            box-shadow: var(--shadow-lg);
+            z-index: 1000;
+        }
+        
+        .selection-tooltip button {
+            width: 32px;
+            height: 32px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.875rem;
+            transition: transform 0.2s;
+        }
+        
+        .selection-tooltip button:hover { transform: scale(1.1); }
+        
+        /* Highlighted text */
+        .highlight-yellow { background: rgba(254, 240, 138, 0.7); }
+        .highlight-green { background: rgba(187, 247, 208, 0.7); }
+        .highlight-blue { background: rgba(191, 219, 254, 0.7); }
+        .highlight-pink { background: rgba(251, 207, 232, 0.7); }
+        
+        @media (max-width: 768px) {
+            .reader-header { padding: 0.5rem 1rem; }
+            .book-title h1 { font-size: 0.875rem; }
+            .controls button { width: 32px; height: 32px; }
+            .page-info { font-size: 0.75rem; min-width: 60px; }
+            .settings-panel { width: 100%; right: -100%; }
+        }
+
+        
+    </style>
+</head>
+<body>
+    <header class="reader-header">
+        <a href="#" onclick="goBack(); return false;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+            Volver
+        </a>
+        <div class="book-title">
+            <h1 id="bookTitle">Cargando...</h1>
+            <p id="bookAuthor"></p>
+        </div>
+        <div class="controls" id="pdfControls" style="display:none;">
+            <button onclick="prevPage()" id="prevBtn" title="Página anterior">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M15 18l-6-6 6-6"/>
+                </svg>
+            </button>
+            <span class="page-info"><span id="currentPage">1</span> / <span id="totalPages">1</span></span>
+            <button onclick="nextPage()" id="nextBtn" title="Página siguiente">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 18l6-6-6-6"/>
+                </svg>
+            </button>
+            <span style="width:1px;height:24px;background:var(--border-color);margin:0 0.5rem;"></span>
+            <button onclick="zoomOut()" title="Alejar">−</button>
+            <span class="zoom-info" id="zoomLevel">100%</span>
+            <button onclick="zoomIn()" title="Acercar">+</button>
+            <button onclick="toggleBookmark()" id="bookmarkBtn" class="bookmark-btn" title="Agregar marcador">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                </svg>
+            </button>
+            <button onclick="toggleSettings()" title="Configuración">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
+                </svg>
+            </button>
+        </div>
+        <div class="controls" id="textControls" style="display:none;">
+            <button onclick="changeFont(-2)" title="Reducir texto">A−</button>
+            <button onclick="changeFont(2)" title="Aumentar texto">A+</button>
+            <button onclick="toggleNotesPanel()" title="Mis notas" id="notesBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/>
+                </svg>
+            </button>
+            <button onclick="toggleBookmark()" id="bookmarkBtnText" class="bookmark-btn" title="Agregar marcador">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                </svg>
+            </button>
+            <button onclick="toggleSettings()" title="Configuración">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <div class="format-toggle" id="formatToggle">
+        <button id="btnPdf" onclick="showFormat('pdf')">Ver PDF</button>
+        <button id="btnText" onclick="showFormat('text')">Ver Texto</button>
+    </div>
+
+    <div class="pdf-container" id="pdfContainer">
+        <div id="pdfViewer">
+            <div class="loading" id="pdfLoading">
+                <div class="spinner"></div>
+                <p>Cargando PDF...</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="content-text font-merriweather" id="contentText"></div>
+
+    <div class="no-content" id="noContent" style="display:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+        </svg>
+        <h2>Sin contenido</h2>
+        <p>Este libro aún no tiene contenido disponible.</p>
+    </div>
+
+    <!-- Settings Panel -->
+    <div class="settings-panel" id="settingsPanel">
+        <h3>Configuración de Lectura</h3>
+        
+        <div class="setting-group">
+            <label>Tema</label>
+            <div class="setting-options">
+                <button class="theme-btn light" onclick="setTheme('light')" title="Claro"></button>
+                <button class="theme-btn dark" onclick="setTheme('dark')" title="Oscuro"></button>
+                <button class="theme-btn sepia" onclick="setTheme('sepia')" title="Sepia"></button>
+            </div>
+        </div>
+        
+        <div class="setting-group" id="fontSettings">
+            <label>Tipografía</label>
+            <div class="setting-options">
+                <button class="setting-btn" onclick="setFont('merriweather')">Merriweather</button>
+                <button class="setting-btn" onclick="setFont('lora')">Lora</button>
+                <button class="setting-btn" onclick="setFont('crimson')">Crimson</button>
+                <button class="setting-btn" onclick="setFont('source')">Source Serif</button>
+                <button class="setting-btn" onclick="setFont('outfit')">Outfit</button>
+            </div>
+        </div>
+        
+        <div class="setting-group">
+            <label>Marcadores guardados</label>
+            <div id="bookmarksList" style="margin-top: 0.5rem;"></div>
+        </div>
+        
+        <div class="setting-group">
+            <label>Mis Notas</label>
+            <div id="notesList" style="margin-top: 0.5rem;"></div>
+        </div>
+    </div>
+    
+    <!-- Notes Panel -->
+    <div class="notes-panel" id="notesPanel">
+        <div class="notes-header">
+            <h3>Notas y Resaltados</h3>
+            <button class="close-btn" onclick="toggleNotesPanel()">&times;</button>
+        </div>
+        <div class="notes-list" id="notesListFull"></div>
+    </div>
+    
+    <!-- Selection Tooltip -->
+    <div class="selection-tooltip" id="selectionTooltip" style="display:none;">
+        <button onclick="highlightText('yellow')" title="Amarillo" style="background:#fef08a;">A</button>
+        <button onclick="highlightText('green')" title="Verde" style="background:#bbf7d0;">A</button>
+        <button onclick="highlightText('blue')" title="Azul" style="background:#bfdbfe;">A</button>
+        <button onclick="highlightText('pink')" title="Rosa" style="background:#fbcfe8;">A</button>
+        <button onclick="addNoteToSelection()" title="Agregar nota">📝</button>
+    </div>
+
+    <div class="save-indicator" id="saveIndicator">Progreso guardado</div>
+
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        
+        const bookId = '{{ book_id }}';
+        let pdfDoc = null;
+        let currentPage = 1;
+        let totalPages = 0;
+        let scale = 1.0;
+        let fontSize = 18;
+        let isLoggedIn = false;
+        let currentFont = 'merriweather';
+        let bookmarks = [];
+        let currentFormat = 'pdf';
+
+        // Theme
+        function initTheme() {
+            const saved = localStorage.getItem('readerTheme') || localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', saved);
+        }
+        
+        function setTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('readerTheme', theme);
+        }
+        
+        function toggleSettings() {
+            document.getElementById('settingsPanel').classList.toggle('open');
+        }
+        
+        initTheme();
+
+        // Font
+        function setFont(font) {
+            currentFont = font;
+            const textEl = document.getElementById('contentText');
+            textEl.className = `content-text font-${font}` + (textEl.classList.contains('active') ? ' active' : '');
+            localStorage.setItem('readerFont', font);
+            
+            document.querySelectorAll('#fontSettings .setting-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.textContent.toLowerCase().includes(font));
+            });
+        }
+
+        // Auth & Progress
+        async function checkAuth() {
+            try {
+                const res = await fetch('/api/auth/me');
+                isLoggedIn = res.ok;
+                if (isLoggedIn) {
+                    loadSavedProgress();
+                    loadBookmarks();
+                }
+            } catch (e) {
+                isLoggedIn = false;
+            }
+        }
+
+        async function loadSavedProgress() {
+            try {
+                const res = await fetch(`/api/progress/${bookId}`);
+                const data = await res.json();
+                if (data.currentPage > 1 && data.percentage > 0) {
+                    currentPage = data.currentPage;
+                    
+                    // Para texto, usar porcentaje para scroll
+                    if (currentFormat === 'text') {
+                        const textEl = document.getElementById('contentText');
+                        const scrollTarget = (data.percentage / 100) * (textEl.scrollHeight - textEl.clientHeight);
+                        textEl.scrollTop = scrollTarget;
+                        totalPages = data.totalPages || totalPages;
+                    } else if (currentFormat === 'pdf' && pdfDoc) {
+                        // Para PDF, ir a la página
+                        totalPages = data.totalPages || totalPages;
+                        setTimeout(() => {
+                            scrollToPage(currentPage);
+                        }, 500);
+                    }
+                    
+                    updatePageInfo();
+                    console.log('Progreso restaurado:', data.percentage + '%');
+                }
+            } catch (e) {
+                console.error('Error loading progress:', e);
+            }
+        }
+
+        async function saveProgress() {
+            if (!isLoggedIn || totalPages === 0) return;
+            
+            try {
+                await fetch(`/api/progress/${bookId}/save`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ currentPage, totalPages })
+                });
+                showSaveIndicator();
+            } catch (e) {
+                console.error('Error saving progress:', e);
+            }
+        }
+
+        function showSaveIndicator() {
+            const el = document.getElementById('saveIndicator');
+            el.classList.add('show');
+            setTimeout(() => el.classList.remove('show'), 2000);
+        }
+
+        setInterval(saveProgress, 30000);
+
+        // Bookmarks
+        async function loadBookmarks() {
+            try {
+                const res = await fetch(`/api/bookmarks/${bookId}`);
+                if (res.ok) {
+                    bookmarks = await res.json();
+                    updateBookmarkUI();
+                    renderBookmarksList();
+                }
+            } catch (e) {
+                console.error('Error loading bookmarks:', e);
+            }
+        }
+
+        async function toggleBookmark() {
+            if (!isLoggedIn) {
+                alert('Inicia sesión para guardar marcadores');
+                return;
+            }
+
+            const pageNum = currentFormat === 'pdf' ? currentPage : getTextScrollPosition();
+            const existing = bookmarks.find(b => b.page === pageNum);
+
+            try {
+                if (existing) {
+                    await fetch(`/api/bookmarks/${bookId}/${existing.id}`, { method: 'DELETE' });
+                    bookmarks = bookmarks.filter(b => b.id !== existing.id);
+                } else {
+                    const res = await fetch(`/api/bookmarks/${bookId}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ page: pageNum, note: `Página ${pageNum}` })
+                    });
+                    if (res.ok) {
+                        const newBookmark = await res.json();
+                        bookmarks.push(newBookmark);
+                    }
+                }
+                updateBookmarkUI();
+                renderBookmarksList();
+            } catch (e) {
+                console.error('Error toggling bookmark:', e);
+            }
+        }
+
+        function updateBookmarkUI() {
+            const pageNum = currentFormat === 'pdf' ? currentPage : getTextScrollPosition();
+            const hasBookmark = bookmarks.some(b => b.page === pageNum);
+            
+            document.getElementById('bookmarkBtn')?.classList.toggle('has-bookmark', hasBookmark);
+            document.getElementById('bookmarkBtnText')?.classList.toggle('has-bookmark', hasBookmark);
+        }
+
+        function renderBookmarksList() {
+            const container = document.getElementById('bookmarksList');
+            if (bookmarks.length === 0) {
+                container.innerHTML = '<p style="color: var(--text-muted); font-size: 0.8125rem;">Sin marcadores</p>';
+                return;
+            }
+            
+            container.innerHTML = bookmarks.map(b => `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: var(--bg-tertiary); border-radius: 6px; margin-bottom: 0.5rem;">
+                    <span style="font-size: 0.8125rem; cursor: pointer;" onclick="goToBookmark(${b.page})">Página ${b.page}</span>
+                    <button onclick="deleteBookmark('${b.id}')" style="background: none; border: none; color: var(--text-muted); cursor: pointer;">×</button>
+                </div>
+            `).join('');
+        }
+
+        function goToBookmark(page) {
+            currentPage = page;
+            scrollToPage(page);
+            updatePageInfo();
+            toggleSettings();
+        }
+
+        async function deleteBookmark(id) {
+            try {
+                await fetch(`/api/bookmarks/${bookId}/${id}`, { method: 'DELETE' });
+                bookmarks = bookmarks.filter(b => b.id !== id);
+                renderBookmarksList();
+                updateBookmarkUI();
+            } catch (e) {
+                console.error('Error deleting bookmark:', e);
+            }
+        }
+
+        function getTextScrollPosition() {
+            const textEl = document.getElementById('contentText');
+            const scrollPercent = textEl.scrollTop / (textEl.scrollHeight - textEl.clientHeight);
+            return Math.max(1, Math.ceil(scrollPercent * 100));
+        }
+
+        // Load Book
+        async function loadBook() {
+            try {
+                const res = await fetch(`/api/books/${bookId}`);
+                const book = await res.json();
+                
+                document.getElementById('bookTitle').textContent = book.title;
+                document.getElementById('bookAuthor').textContent = book.author;
+                document.title = book.title + ' - Lector';
+
+                const hasPdf = book.pdfUrl?.trim();
+                const hasText = book.content?.trim();
+
+                // Si hay texto, siempre prepararlo
+                if (hasText) {
+                    document.getElementById('contentText').innerHTML = book.content.split('\n').map(p => `<p>${p}</p>`).join('');
+                }
+
+                // Mostrar toggle siempre que haya texto (para poder cambiar entre formatos)
+                if (hasText) {
+                    document.getElementById('formatToggle').classList.add('visible');
+                    document.getElementById('pdfContainer').classList.add('has-toggle');
+                    document.getElementById('contentText').classList.add('has-toggle');
+                }
+
+                if (hasPdf) {
+                    document.getElementById('pdfContainer').classList.add('active');
+                    document.getElementById('pdfControls').style.display = 'flex';
+                    document.getElementById('btnPdf').classList.add('active');
+                    loadPdf(book.pdfUrl);
+                    currentFormat = 'pdf';
+                } else if (hasText) {
+                    // Solo texto disponible
+                    document.getElementById('contentText').classList.add('active');
+                    document.getElementById('textControls').style.display = 'flex';
+                    document.getElementById('fontSettings').style.display = 'block';
+                    document.getElementById('btnText').classList.add('active');
+                    currentFormat = 'text';
+                    // Calcular páginas basado en el contenido (aprox 2000 caracteres por página)
+                    totalPages = Math.max(1, Math.ceil(book.content.length / 2000));
+                    document.getElementById('totalPages').textContent = totalPages;
+                } else {
+                    document.getElementById('noContent').style.display = 'block';
+                }
+
+                checkAuth();
+                
+                // Cargar progreso guardado después de que el contenido esté listo
+                setTimeout(() => {
+                    if (isLoggedIn) {
+                        loadSavedProgress();
+                    }
+                }, 2000);
+                
+                const savedFont = localStorage.getItem('readerFont');
+                if (savedFont) setFont(savedFont);
+            } catch (e) {
+                console.error('Error loading book:', e);
+            }
+        }
+
+        async function loadPdf(url) {
+            // Si es Google Drive, usar iframe
+            if (url.includes('drive.google.com')) {
+                const match = url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
+                if (match) {
+                    const driveUrl = `https://drive.google.com/file/d/${match[1]}/preview`;
+                    document.getElementById('pdfLoading').style.display = 'none';
+                    
+                    const viewer = document.getElementById('pdfViewer');
+                    viewer.innerHTML = `
+                        <div style="position:relative;width:100%;height:calc(100vh - 120px);">
+                            <iframe src="${driveUrl}" style="width:100%;height:100%;border:none;" allowfullscreen></iframe>
+                            <div style="position:absolute;top:0;right:0;width:50px;height:50px;background:var(--bg-tertiary);"></div>
+                        </div>
+                    `;
+                    
+                    document.getElementById('pdfControls').style.display = 'none';
+                    totalPages = 1;
+                    return;
+                }
+            }
+            
+            // Para otros PDFs, usar PDF.js
+            try {
+                const loadingTask = pdfjsLib.getDocument(url);
+                pdfDoc = await loadingTask.promise;
+                totalPages = pdfDoc.numPages;
+                document.getElementById('totalPages').textContent = totalPages;
+                document.getElementById('pdfLoading').style.display = 'none';
+                
+                const viewer = document.getElementById('pdfViewer');
+                for (let i = 1; i <= totalPages; i++) {
+                    const canvas = document.createElement('canvas');
+                    canvas.id = `page-${i}`;
+                    canvas.dataset.page = i;
+                    viewer.appendChild(canvas);
+                }
+                
+                renderAllPages();
+                updatePageInfo();
+            } catch (e) {
+                console.error('Error loading PDF:', e);
+                // Si hay texto disponible, mostrar el toggle y cambiar a texto
+                const hasText = document.getElementById('contentText').innerHTML.trim();
+                if (hasText) {
+                    document.getElementById('formatToggle').classList.add('visible');
+                    document.getElementById('pdfLoading').innerHTML = `
+                        <p style="color: var(--text-muted);">Error al cargar el PDF</p>
+                        <p style="font-size: 0.8rem;">${e.message}</p>
+                        <button onclick="showFormat('text')" style="margin-top: 1rem; padding: 0.5rem 1rem; background: var(--accent-primary); color: white; border: none; border-radius: 6px; cursor: pointer;">Ver Texto en su lugar</button>
+                    `;
+                } else {
+                    document.getElementById('pdfLoading').innerHTML = `
+                        <p style="color: var(--text-muted);">Error al cargar el PDF</p>
+                        <p style="font-size: 0.8rem;">${e.message}</p>
+                    `;
+                }
+            }
+        }
+
+        async function renderAllPages() {
+            if (!pdfDoc) return;
+            for (let i = 1; i <= totalPages; i++) {
+                await renderPage(i);
+            }
+        }
+
+        async function renderPage(pageNum) {
+            if (!pdfDoc) return;
+            try {
+                const page = await pdfDoc.getPage(pageNum);
+                const canvas = document.getElementById(`page-${pageNum}`);
+                if (!canvas) return;
+                
+                const ctx = canvas.getContext('2d');
+                const viewport = page.getViewport({ scale });
+                
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+                
+                await page.render({ canvasContext: ctx, viewport }).promise;
+            } catch (e) {
+                console.error(`Error rendering page ${pageNum}:`, e);
+            }
+        }
+
+        function updatePageInfo() {
+            document.getElementById('currentPage').textContent = currentPage;
+            document.getElementById('prevBtn').disabled = currentPage <= 1;
+            document.getElementById('nextBtn').disabled = currentPage >= totalPages;
+            updateBookmarkUI();
+        }
+
+        function prevPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                scrollToPage(currentPage);
+                updatePageInfo();
+                saveProgress();
+            }
+        }
+
+        function nextPage() {
+            if (currentPage < totalPages) {
+                currentPage++;
+                scrollToPage(currentPage);
+                updatePageInfo();
+                saveProgress();
+            }
+        }
+
+        function scrollToPage(pageNum) {
+            const canvas = document.getElementById(`page-${pageNum}`);
+            if (canvas) canvas.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        async function zoomIn() {
+            if (scale < 3) {
+                scale += 0.25;
+                document.getElementById('zoomLevel').textContent = Math.round(scale * 100) + '%';
+                await renderAllPages();
+            }
+        }
+
+        async function zoomOut() {
+            if (scale > 0.5) {
+                scale -= 0.25;
+                document.getElementById('zoomLevel').textContent = Math.round(scale * 100) + '%';
+                await renderAllPages();
+            }
+        }
+
+        document.getElementById('pdfContainer').addEventListener('scroll', () => {
+            const canvases = document.querySelectorAll('#pdfViewer canvas');
+            for (const canvas of canvases) {
+                const rect = canvas.getBoundingClientRect();
+                if (rect.top >= 0 && rect.top < window.innerHeight / 2) {
+                    const newPage = parseInt(canvas.dataset.page);
+                    if (newPage !== currentPage) {
+                        currentPage = newPage;
+                        updatePageInfo();
+                    }
+                    break;
+                }
+            }
+        });
+
+        function showFormat(format) {
+            currentFormat = format;
+            document.getElementById('pdfContainer').classList.toggle('active', format === 'pdf');
+            document.getElementById('contentText').classList.toggle('active', format === 'text');
+            
+            const btnPdf = document.getElementById('btnPdf');
+            const btnText = document.getElementById('btnText');
+            if (btnPdf) btnPdf.classList.toggle('active', format === 'pdf');
+            if (btnText) btnText.classList.toggle('active', format === 'text');
+            
+            document.getElementById('pdfControls').style.display = format === 'pdf' ? 'flex' : 'none';
+            document.getElementById('textControls').style.display = format === 'text' ? 'flex' : 'none';
+            document.getElementById('fontSettings').style.display = format === 'text' ? 'block' : 'none';
+            
+            // Mostrar el toggle cuando hay texto disponible
+            const hasText = document.getElementById('contentText').innerHTML.trim();
+            if (hasText) {
+                document.getElementById('formatToggle').classList.add('visible');
+            }
+        }
+
+        function changeFont(delta) {
+            fontSize = Math.max(14, Math.min(28, fontSize + delta));
+            document.getElementById('contentText').style.fontSize = fontSize + 'px';
+        }
+
+        function goBack() {
+            saveProgress();
+            history.back();
+        }
+
+        // Disable right-click and print/save
+        document.getElementById('pdfViewer').addEventListener('contextmenu', e => e.preventDefault());
+        document.addEventListener('keydown', e => {
+            if ((e.ctrlKey || e.metaKey) && (e.key === 'p' || e.key === 's')) e.preventDefault();
+        });
+
+        // Close settings when clicking outside
+        document.addEventListener('click', (e) => {
+            const panel = document.getElementById('settingsPanel');
+            const isSettingsBtn = e.target.closest('button[onclick="toggleSettings()"]');
+            if (!panel.contains(e.target) && !isSettingsBtn && panel.classList.contains('open')) {
+                panel.classList.remove('open');
+            }
+        });
+
+        // Tracking de scroll para texto
+        let textScrollTimeout;
+        document.getElementById('contentText').addEventListener('scroll', function() {
+            if (currentFormat !== 'text') return;
+            
+            const textEl = this;
+            const scrollPercent = textEl.scrollTop / (textEl.scrollHeight - textEl.clientHeight);
+            currentPage = Math.max(1, Math.ceil(scrollPercent * totalPages));
+            updatePageInfo();
+            
+            // Guardar progreso después de dejar de hacer scroll
+            clearTimeout(textScrollTimeout);
+            textScrollTimeout = setTimeout(() => {
+                if (isLoggedIn) saveProgress();
+            }, 1000);
+        });
+
+        // ==================== NOTAS Y RESALTADOS ====================
+        let notes = [];
+        let selectedText = '';
+        let selectionRange = null;
+
+        async function loadNotes() {
+            if (!isLoggedIn) return;
+            try {
+                const res = await fetch(`/api/notes/${bookId}`);
+                if (res.ok) {
+                    notes = await res.json();
+                    renderNotesList();
+                    applyHighlights();
+                }
+            } catch (e) {
+                console.error('Error loading notes:', e);
+            }
+        }
+
+        function renderNotesList() {
+            const container = document.getElementById('notesListFull');
+            const miniContainer = document.getElementById('notesList');
+            
+            if (notes.length === 0) {
+                container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 2rem;">No tienes notas aún. Selecciona texto para resaltar.</p>';
+                miniContainer.innerHTML = '<p style="color: var(--text-muted); font-size: 0.8125rem;">Sin notas</p>';
+                return;
+            }
+            
+            const renderNote = (n, mini = false) => `
+                <div class="note-item ${n.color}" data-note-id="${n.id}">
+                    <div class="note-text">"${escapeHtml(n.text?.substring(0, mini ? 50 : 150))}${n.text?.length > (mini ? 50 : 150) ? '...' : ''}"</div>
+                    ${n.note ? `<div class="note-comment">${escapeHtml(n.note)}</div>` : ''}
+                    <div class="note-meta">
+                        <span>Pág. ${n.page}</span>
+                        ${!mini ? `<div class="note-actions">
+                            <button onclick="editNote('${n.id}')" title="Editar">✏️</button>
+                            <button onclick="deleteNote('${n.id}')" title="Eliminar">🗑️</button>
+                        </div>` : ''}
+                    </div>
+                </div>
+            `;
+            
+            container.innerHTML = notes.map(n => renderNote(n)).join('');
+            miniContainer.innerHTML = notes.slice(0, 3).map(n => renderNote(n, true)).join('');
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        function applyHighlights() {
+            // Aplicar resaltados al texto cargado
+            const textEl = document.getElementById('contentText');
+            notes.forEach(note => {
+                if (note.text && textEl.innerHTML.includes(note.text.substring(0, 50))) {
+                    const regex = new RegExp(`(${escapeRegex(note.text.substring(0, 100))})`, 'gi');
+                    textEl.innerHTML = textEl.innerHTML.replace(regex, `<mark class="highlight-${note.color}" data-note-id="${note.id}">$1</mark>`);
+                }
+            });
+        }
+
+        function escapeRegex(str) {
+            return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        function toggleNotesPanel() {
+            document.getElementById('notesPanel').classList.toggle('open');
+        }
+
+        // Detectar selección de texto
+        document.getElementById('contentText').addEventListener('mouseup', function(e) {
+            const selection = window.getSelection();
+            selectedText = selection.toString().trim();
+            
+            if (selectedText.length > 5 && isLoggedIn) {
+                selectionRange = selection.getRangeAt(0);
+                showSelectionTooltip(e);
+            } else {
+                hideSelectionTooltip();
+            }
+        });
+
+        function showSelectionTooltip(e) {
+            const tooltip = document.getElementById('selectionTooltip');
+            tooltip.style.display = 'flex';
+            tooltip.style.left = e.pageX + 'px';
+            tooltip.style.top = (e.pageY - 50) + 'px';
+        }
+
+        function hideSelectionTooltip() {
+            document.getElementById('selectionTooltip').style.display = 'none';
+        }
+
+        async function highlightText(color) {
+            if (!selectedText || !isLoggedIn) return;
+            
+            try {
+                const res = await fetch(`/api/notes/${bookId}/create`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        text: selectedText,
+                        color: color,
+                        page: currentPage,
+                        note: ''
+                    })
+                });
+                
+                if (res.ok) {
+                    const note = await res.json();
+                    notes.unshift(note);
+                    
+                    // Aplicar resaltado visual
+                    if (selectionRange) {
+                        const mark = document.createElement('mark');
+                        mark.className = `highlight-${color}`;
+                        mark.dataset.noteId = note.id;
+                        selectionRange.surroundContents(mark);
+                    }
+                    
+                    renderNotesList();
+                    hideSelectionTooltip();
+                    showSaveIndicator();
+                }
+            } catch (e) {
+                console.error('Error creating highlight:', e);
+            }
+        }
+
+        async function addNoteToSelection() {
+            if (!selectedText) return;
+            
+            const noteText = prompt('Escribe tu nota:');
+            if (noteText === null) return;
+            
+            try {
+                const res = await fetch(`/api/notes/${bookId}/create`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        text: selectedText,
+                        color: 'yellow',
+                        page: currentPage,
+                        note: noteText
+                    })
+                });
+                
+                if (res.ok) {
+                    const note = await res.json();
+                    notes.unshift(note);
+                    
+                    if (selectionRange) {
+                        const mark = document.createElement('mark');
+                        mark.className = 'highlight-yellow';
+                        mark.dataset.noteId = note.id;
+                        selectionRange.surroundContents(mark);
+                    }
+                    
+                    renderNotesList();
+                    hideSelectionTooltip();
+                    showSaveIndicator();
+                }
+            } catch (e) {
+                console.error('Error creating note:', e);
+            }
+        }
+
+        async function editNote(noteId) {
+            const note = notes.find(n => n.id === noteId);
+            if (!note) return;
+            
+            const newNote = prompt('Editar nota:', note.note || '');
+            if (newNote === null) return;
+            
+            try {
+                await fetch(`/api/notes/${bookId}/${noteId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ note: newNote, color: note.color })
+                });
+                
+                note.note = newNote;
+                renderNotesList();
+            } catch (e) {
+                console.error('Error updating note:', e);
+            }
+        }
+
+        async function deleteNote(noteId) {
+            if (!confirm('¿Eliminar esta nota?')) return;
+            
+            try {
+                await fetch(`/api/notes/${bookId}/${noteId}/delete`, { method: 'DELETE' });
+                notes = notes.filter(n => n.id !== noteId);
+                
+                // Remover resaltado visual
+                const mark = document.querySelector(`mark[data-note-id="${noteId}"]`);
+                if (mark) {
+                    const text = document.createTextNode(mark.textContent);
+                    mark.parentNode.replaceChild(text, mark);
+                }
+                
+                renderNotesList();
+            } catch (e) {
+                console.error('Error deleting note:', e);
+            }
+        }
+
+        // Ocultar tooltip al hacer click fuera
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.selection-tooltip') && !window.getSelection().toString().trim()) {
+                hideSelectionTooltip();
+            }
+        });
+
+        // Cargar notas después de cargar el libro
+        setTimeout(() => {
+            if (isLoggedIn) loadNotes();
+        }, 2000);
+
+        loadBook();
+    </script>
+</body>
+</html>

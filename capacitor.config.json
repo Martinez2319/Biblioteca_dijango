@@ -1,0 +1,19 @@
+{
+  "appId": "com.bibliotecavirtual.app",
+  "appName": "Biblioteca Virtual",
+  "webDir": "staticfiles",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "backgroundColor": "#4f46e5",
+      "showSpinner": false
+    }
+  },
+  "android": {
+    "allowMixedContent": true
+  }
+}

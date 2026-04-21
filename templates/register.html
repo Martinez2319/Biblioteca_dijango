@@ -1,0 +1,479 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% include '_seo_head.html' %}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
+    <style>
+        .auth-container { display: flex; min-height: 100vh; }
+        .auth-form {
+            flex: 1; display: flex; flex-direction: column; justify-content: center;
+            padding: 2rem; max-width: 520px; margin: 0 auto;
+        }
+        .auth-image {
+            flex: 1; background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+            position: relative; display: none;
+        }
+        .auth-image::before {
+            content: ''; position: absolute; inset: 0;
+            background: url('https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=1200') center/cover;
+            opacity: 0.2;
+        }
+        .auth-logo {
+            display: flex; align-items: center; gap: 0.5rem;
+            font-size: 1.25rem; font-weight: 700; color: var(--text-primary);
+            text-decoration: none; margin-bottom: 2rem;
+        }
+        .auth-logo svg { color: var(--accent-primary); }
+        .auth-form h1 { font-size: 1.75rem; margin-bottom: 0.5rem; }
+        .auth-form > p { color: var(--text-muted); margin-bottom: 2rem; }
+        .auth-form .btn { width: 100%; padding: 1rem; margin-top: 0.5rem; }
+        .auth-link { margin-top: 1.5rem; text-align: center; font-size: 0.9375rem; color: var(--text-muted); }
+        .auth-link a { color: var(--accent-primary); font-weight: 600; }
+
+        .error-msg {
+            padding: 0.875rem; background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: var(--radius-md); color: var(--danger);
+            font-size: 0.875rem; margin-bottom: 1rem; display: none;
+        }
+
+        .field-msg {
+            font-size: 0.8125rem; margin-top: 0.375rem; min-height: 1em;
+            display: flex; align-items: center; gap: 0.35rem;
+        }
+        .field-msg.ok { color: #16a34a; }
+        .field-msg.err { color: var(--danger); }
+        .field-msg .spinner {
+            width: 12px; height: 12px; border: 2px solid var(--border-color);
+            border-top-color: var(--accent-primary); border-radius: 50%;
+            animation: spin 0.7s linear infinite; display: inline-block;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .input-wrapper { position: relative; }
+        .input-wrapper.ok input {
+            border-color: #16a34a !important;
+            background-image: linear-gradient(transparent, transparent);
+        }
+        .input-wrapper.err input {
+            border-color: var(--danger) !important;
+        }
+
+        .password-rules {
+            margin-top: 0.5rem; padding: 0.75rem 1rem;
+            background: var(--bg-secondary); border-radius: var(--radius-md);
+            font-size: 0.8125rem;
+        }
+        .password-rules li {
+            list-style: none; padding: 0.2rem 0;
+            color: var(--text-muted);
+            display: flex; align-items: center; gap: 0.4rem;
+        }
+        .password-rules li.ok { color: #16a34a; }
+        .password-rules li .ico {
+            display: inline-flex; width: 16px; height: 16px;
+            align-items: center; justify-content: center;
+            border-radius: 50%; font-size: 10px;
+            background: var(--border-color); color: white;
+        }
+        .password-rules li.ok .ico { background: #16a34a; }
+
+        .strength-bar {
+            height: 4px; background: var(--border-color);
+            border-radius: 2px; margin-top: 0.5rem; overflow: hidden;
+        }
+        .strength-bar > span {
+            display: block; height: 100%; width: 0%;
+            transition: width 0.25s, background 0.25s;
+        }
+
+        .benefits {
+            margin-top: 1.5rem; padding: 1rem;
+            background: var(--accent-light); border-radius: var(--radius-md);
+        }
+        .benefits h3 { font-size: 0.875rem; margin-bottom: 0.5rem; color: var(--accent-primary); }
+        .benefits ul { list-style: none; font-size: 0.8125rem; color: var(--text-secondary); }
+        .benefits li { padding: 0.25rem 0; }
+        .benefits li::before { content: 'OK '; color: var(--accent-primary); font-weight: bold; }
+
+        @media (min-width: 768px) {
+            .auth-image { display: block; }
+            .auth-form { padding: 3rem; }
+        }
+
+        /* ===== Boton Google (OAuth) ===== */
+        .btn-google {
+            width: 100%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            padding: 0.875rem 1rem;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            font-size: 0.9375rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s, border-color 0.15s, transform 0.05s;
+        }
+        .btn-google:hover { background: var(--bg-secondary); border-color: var(--accent-primary); }
+        .btn-google:active { transform: scale(0.995); }
+        .btn-google svg { flex-shrink: 0; }
+        .or-sep {
+            display: flex; align-items: center; gap: 0.75rem;
+            margin: 1.25rem 0 1rem; color: var(--text-muted);
+            font-size: 0.8125rem;
+        }
+        .or-sep::before, .or-sep::after {
+            content: ''; flex: 1; height: 1px; background: var(--border-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-form">
+            <a href="/" class="auth-logo">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                </svg>
+                Biblioteca Virtual
+            </a>
+
+            <h1>Crear cuenta</h1>
+            <p>Unete y accede a toda nuestra biblioteca</p>
+
+            <button type="button" class="btn-google" id="googleBtn" data-testid="register-google">
+                <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+                    <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.6-6 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.8 1.1 7.9 3l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.2-.1-2.4-.4-3.5z"/>
+                    <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 16.1 19 13 24 13c3 0 5.8 1.1 7.9 3l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.6 8.3 6.3 14.7z"/>
+                    <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.4 35 26.8 36 24 36c-5.3 0-9.7-3.4-11.3-8L6.1 33C9.3 39.5 16.1 44 24 44z"/>
+                    <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.1-4.1 5.5l6.2 5.2C41.4 35.8 44 30.3 44 24c0-1.2-.1-2.4-.4-3.5z"/>
+                </svg>
+                <span>Continuar con Google</span>
+            </button>
+            <div class="or-sep"><span>o registrate con email</span></div>
+
+            <div class="error-msg" id="errorMsg"></div>
+
+            <form id="registerForm" novalidate>
+                <div class="form-group">
+                    <label>Nombre completo</label>
+                    <div class="input-wrapper" id="nameWrap">
+                        <input type="text" id="name" required placeholder="Tu nombre" data-testid="register-name" autocomplete="name" minlength="2" maxlength="80">
+                    </div>
+                    <div class="field-msg" id="nameMsg"></div>
+                </div>
+
+                <div class="form-group">
+                    <label>Correo electronico</label>
+                    <div class="input-wrapper" id="emailWrap">
+                        <input type="email" id="email" required placeholder="tu@email.com" data-testid="register-email" autocomplete="email">
+                    </div>
+                    <div class="field-msg" id="emailMsg"></div>
+                </div>
+
+                <div class="form-group">
+                    <label>Contrasena</label>
+                    <div class="input-wrapper" id="passwordWrap">
+                        <input type="password" id="password" required placeholder="Minimo 8 caracteres" data-testid="register-password" autocomplete="new-password">
+                    </div>
+                    <div class="strength-bar"><span id="strengthBar"></span></div>
+                    <ul class="password-rules" id="pwRules">
+                        <li data-rule="min_length"><span class="ico">.</span> Al menos 8 caracteres</li>
+                        <li data-rule="has_lower"><span class="ico">.</span> Al menos una letra minuscula (a-z)</li>
+                        <li data-rule="has_upper"><span class="ico">.</span> Al menos una letra mayuscula (A-Z)</li>
+                        <li data-rule="has_digit"><span class="ico">.</span> Al menos un numero (0-9)</li>
+                        <li data-rule="has_symbol"><span class="ico">.</span> Al menos un simbolo (por ej. ! @ # $ %)</li>
+                        <li data-rule="not_common"><span class="ico">.</span> No ser una contrasena obvia</li>
+                    </ul>
+                </div>
+
+                <button type="submit" class="btn btn-primary" id="submitBtn" data-testid="register-submit" disabled>
+                    Crear Cuenta
+                </button>
+            </form>
+
+            <div class="benefits">
+                <h3>Beneficios de registrarte</h3>
+                <ul>
+                    <li>Acceso ilimitado a todos los libros</li>
+                    <li>Guarda tu progreso de lectura</li>
+                    <li>Sin anuncios ni interrupciones</li>
+                </ul>
+            </div>
+
+            <p class="auth-link">
+                Ya tienes cuenta? <a href="/login">Inicia sesion</a>
+            </p>
+        </div>
+        <div class="auth-image"></div>
+    </div>
+
+    <script>
+        // ================== Tema ==================
+        const saved = localStorage.getItem('theme');
+        if (saved) document.documentElement.setAttribute('data-theme', saved);
+
+        // ================== Google OAuth ==================
+        // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS,
+        // THIS BREAKS THE AUTH. Usamos window.location.origin dinamicamente.
+        document.getElementById('googleBtn').addEventListener('click', () => {
+            const redirectUrl = window.location.origin + '/auth/google/callback';
+            window.location.href =
+                'https://auth.emergentagent.com/?redirect=' + encodeURIComponent(redirectUrl);
+        });
+
+        // ================== Elementos ==================
+        const nameEl = document.getElementById('name');
+        const emailEl = document.getElementById('email');
+        const passwordEl = document.getElementById('password');
+        const submitBtn = document.getElementById('submitBtn');
+        const errorEl = document.getElementById('errorMsg');
+
+        const nameWrap = document.getElementById('nameWrap');
+        const emailWrap = document.getElementById('emailWrap');
+        const passwordWrap = document.getElementById('passwordWrap');
+
+        const nameMsg = document.getElementById('nameMsg');
+        const emailMsg = document.getElementById('emailMsg');
+
+        const pwRules = document.getElementById('pwRules');
+        const strengthBar = document.getElementById('strengthBar');
+
+        // ================== Estado ==================
+        const state = {
+            nameOk: false,
+            emailOk: false,
+            passwordOk: false,
+            pwChecks: {
+                min_length: false, has_lower: false, has_upper: false,
+                has_digit: false, has_symbol: false, not_common: true,
+            },
+        };
+
+        function updateSubmit() {
+            submitBtn.disabled = !(state.nameOk && state.emailOk && state.passwordOk);
+        }
+
+        // ================== Nombre ==================
+        function validateName() {
+            const v = nameEl.value.trim();
+            if (v.length === 0) {
+                state.nameOk = false;
+                nameWrap.className = 'input-wrapper';
+                nameMsg.textContent = '';
+                nameMsg.className = 'field-msg';
+            } else if (v.length < 2) {
+                state.nameOk = false;
+                nameWrap.className = 'input-wrapper err';
+                nameMsg.textContent = 'El nombre es demasiado corto';
+                nameMsg.className = 'field-msg err';
+            } else {
+                state.nameOk = true;
+                nameWrap.className = 'input-wrapper ok';
+                nameMsg.textContent = 'OK';
+                nameMsg.className = 'field-msg ok';
+            }
+            updateSubmit();
+        }
+        nameEl.addEventListener('input', validateName);
+        nameEl.addEventListener('blur', validateName);
+
+        // ================== Email (local + server) ==================
+        const EMAIL_REGEX = /^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$/;
+
+        function localEmailCheck() {
+            const v = emailEl.value.trim().toLowerCase();
+            if (!v) return { ok: false, msg: '' };
+            if (!v.includes('@')) return { ok: false, msg: 'Falta el simbolo @' };
+            if (v.split('@').length !== 2) return { ok: false, msg: 'Formato invalido' };
+            const [local, domain] = v.split('@');
+            if (!local) return { ok: false, msg: 'Falta el usuario antes de la @' };
+            if (!domain) return { ok: false, msg: 'Falta el dominio despues de la @' };
+            if (!domain.includes('.')) return { ok: false, msg: 'El dominio debe contener un punto (ej: gmail.com)' };
+            if (!EMAIL_REGEX.test(v)) return { ok: false, msg: 'Formato de email invalido' };
+            return { ok: true, msg: '' };
+        }
+
+        let emailDebounce = null;
+        let emailRequestId = 0;
+
+        async function validateEmail(checkServer = true) {
+            const local = localEmailCheck();
+            if (!local.ok) {
+                state.emailOk = false;
+                emailWrap.className = 'input-wrapper' + (emailEl.value ? ' err' : '');
+                emailMsg.textContent = local.msg;
+                emailMsg.className = 'field-msg' + (emailEl.value ? ' err' : '');
+                updateSubmit();
+                return;
+            }
+
+            if (!checkServer) {
+                emailMsg.innerHTML = '<span class="spinner"></span> Verificando dominio...';
+                emailMsg.className = 'field-msg';
+                return;
+            }
+
+            emailMsg.innerHTML = '<span class="spinner"></span> Verificando dominio...';
+            emailMsg.className = 'field-msg';
+            const reqId = ++emailRequestId;
+
+            try {
+                const res = await fetch('/api/auth/validate-signup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: emailEl.value.trim().toLowerCase(), checkDomain: true })
+                });
+                if (reqId !== emailRequestId) return; // respuesta obsoleta
+                const data = await res.json();
+                if (data.email.valid) {
+                    state.emailOk = true;
+                    emailWrap.className = 'input-wrapper ok';
+                    emailMsg.textContent = 'Email valido';
+                    emailMsg.className = 'field-msg ok';
+                } else {
+                    state.emailOk = false;
+                    emailWrap.className = 'input-wrapper err';
+                    emailMsg.textContent = data.email.message || 'Email no valido';
+                    emailMsg.className = 'field-msg err';
+                }
+            } catch (_) {
+                state.emailOk = local.ok;
+                emailWrap.className = 'input-wrapper' + (local.ok ? ' ok' : ' err');
+                emailMsg.textContent = local.ok ? 'Formato valido (sin verificacion online)' : local.msg;
+                emailMsg.className = 'field-msg' + (local.ok ? ' ok' : ' err');
+            }
+            updateSubmit();
+        }
+
+        emailEl.addEventListener('input', () => {
+            clearTimeout(emailDebounce);
+            validateEmail(false);
+            emailDebounce = setTimeout(() => validateEmail(true), 600);
+        });
+        emailEl.addEventListener('blur', () => {
+            clearTimeout(emailDebounce);
+            validateEmail(true);
+        });
+
+        // ================== Contrasena (solo client-side, inmediato) ==================
+        const COMMON = new Set([
+            'password', '12345678', 'qwerty12', 'password1', 'password123',
+            'admin123', 'abc12345', 'iloveyou', 'welcome1', 'letmein1',
+            'contrasena', 'contrasena1', 'contrasena123',
+            'biblioteca', 'biblioteca1', 'biblioteca123'
+        ]);
+
+        function checkPassword(pw) {
+            return {
+                min_length: pw.length >= 8,
+                has_lower: /[a-z]/.test(pw),
+                has_upper: /[A-Z]/.test(pw),
+                has_digit: /[0-9]/.test(pw),
+                has_symbol: /[^A-Za-z0-9]/.test(pw),
+                not_common: !COMMON.has(pw.toLowerCase()),
+            };
+        }
+
+        function updatePasswordUI() {
+            const pw = passwordEl.value;
+            const c = checkPassword(pw);
+            state.pwChecks = c;
+
+            const rules = pwRules.querySelectorAll('li');
+            let okCount = 0;
+            rules.forEach(li => {
+                const k = li.getAttribute('data-rule');
+                if (c[k]) {
+                    li.classList.add('ok');
+                    li.querySelector('.ico').textContent = 'v';
+                    okCount++;
+                } else {
+                    li.classList.remove('ok');
+                    li.querySelector('.ico').textContent = '.';
+                }
+            });
+
+            const allOk = Object.values(c).every(Boolean);
+            state.passwordOk = allOk;
+            passwordWrap.className = 'input-wrapper' + (pw ? (allOk ? ' ok' : ' err') : '');
+
+            // Medidor de fuerza
+            const pct = Math.round((okCount / 6) * 100);
+            strengthBar.style.width = pct + '%';
+            if (pct < 40)      strengthBar.style.background = '#ef4444';
+            else if (pct < 70) strengthBar.style.background = '#f59e0b';
+            else if (pct < 100) strengthBar.style.background = '#3b82f6';
+            else               strengthBar.style.background = '#16a34a';
+
+            updateSubmit();
+        }
+
+        passwordEl.addEventListener('input', updatePasswordUI);
+        passwordEl.addEventListener('blur', updatePasswordUI);
+
+        // ================== Submit ==================
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorEl.style.display = 'none';
+
+            // Validacion final antes de mandar
+            validateName();
+            await validateEmail(true);
+            updatePasswordUI();
+
+            if (!state.nameOk || !state.emailOk || !state.passwordOk) {
+                errorEl.textContent = 'Corrige los errores del formulario antes de continuar.';
+                errorEl.style.display = 'block';
+                return;
+            }
+
+            const body = {
+                name: nameEl.value.trim(),
+                email: emailEl.value.trim().toLowerCase(),
+                password: passwordEl.value,
+            };
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Creando cuenta...';
+
+            try {
+                const res = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify(body)
+                });
+                let data = {};
+                try { data = await res.json(); } catch (_) {}
+
+                if (res.ok && data.success) {
+                    location.href = '/';
+                } else {
+                    errorEl.textContent = data.error || 'Error al registrarse';
+                    errorEl.style.display = 'block';
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Crear Cuenta';
+                }
+            } catch (err) {
+                errorEl.textContent = 'Error de red al registrarse';
+                errorEl.style.display = 'block';
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Crear Cuenta';
+            }
+        });
+
+        // Inicializar UI
+        updatePasswordUI();
+    </script>
+</body>
+</html>

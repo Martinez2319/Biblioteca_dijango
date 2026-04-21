@@ -1,0 +1,821 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+.book-page {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+}
+
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-muted);
+    margin-bottom: 2rem;
+    font-size: 0.9375rem;
+    transition: color var(--transition);
+}
+
+.back-link:hover { color: var(--accent-primary); }
+
+.book-layout {
+    display: grid;
+    gap: 3rem;
+}
+
+.book-cover {
+    text-align: center;
+    position: relative;
+}
+
+.book-cover img {
+    width: 100%;
+    max-width: 280px;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xl);
+}
+
+.premium-tag {
+    position: absolute;
+    top: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 700;
+}
+
+.book-info h1 { margin-bottom: 0.5rem; }
+
+.book-author {
+    font-size: 1.125rem;
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+}
+
+.book-rating {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.stars { color: #f59e0b; font-size: 1.25rem; }
+.rating-text { color: var(--text-muted); font-size: 0.875rem; }
+
+.book-meta {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+}
+
+.book-desc {
+    color: var(--text-secondary);
+    line-height: 1.8;
+    margin-bottom: 2rem;
+}
+
+.book-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.read-btn {
+    flex: 1;
+    min-width: 200px;
+    padding: 1rem;
+    font-size: 1rem;
+}
+
+.buy-btn {
+    flex: 1;
+    min-width: 200px;
+    padding: 1rem;
+    font-size: 1rem;
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    border: none;
+}
+
+.buy-btn:hover {
+    background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+}
+
+.fav-btn {
+    width: 50px;
+    height: 50px;
+    padding: 0;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    transition: all 0.2s;
+}
+
+.fav-btn.active {
+    background: #fee2e2;
+    border-color: #fca5a5;
+    color: #ef4444;
+}
+
+[data-theme="dark"] .fav-btn.active {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: #ef4444;
+}
+
+.progress-bar {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+}
+
+.progress-bar h4 {
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+    color: var(--text-secondary);
+}
+
+.progress-track {
+    height: 8px;
+    background: var(--border-color);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: var(--accent-primary);
+    border-radius: 4px;
+    transition: width 0.3s;
+}
+
+.progress-text {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0.5rem;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.guest-warning {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    border-radius: var(--radius-md);
+    color: var(--warning);
+    font-size: 0.875rem;
+}
+
+.guest-warning a {
+    color: var(--accent-primary);
+    font-weight: 600;
+}
+
+/* Reviews Section */
+.reviews-section {
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.reviews-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.reviews-header h2 {
+    font-size: 1.25rem;
+}
+
+.write-review-btn {
+    font-size: 0.875rem;
+}
+
+/* Review Form */
+.review-form {
+    background: var(--bg-tertiary);
+    padding: 1.5rem;
+    border-radius: var(--radius-lg);
+    margin-bottom: 2rem;
+}
+
+.rating-input {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.rating-input button {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--border-color);
+    transition: color 0.2s;
+}
+
+.rating-input button.active,
+.rating-input button:hover {
+    color: #f59e0b;
+}
+
+.review-form textarea {
+    width: 100%;
+    padding: 0.875rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 0.9375rem;
+    resize: vertical;
+    min-height: 100px;
+}
+
+.review-form-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+    margin-top: 1rem;
+}
+
+/* Review List */
+.review-item {
+    padding: 1.25rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    margin-bottom: 1rem;
+}
+
+.review-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.75rem;
+}
+
+.reviewer-info h4 {
+    font-size: 0.9375rem;
+    margin-bottom: 0.25rem;
+}
+
+.reviewer-info .stars {
+    font-size: 0.875rem;
+}
+
+.review-date {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.review-text {
+    color: var(--text-secondary);
+    line-height: 1.6;
+    font-size: 0.9375rem;
+}
+
+.review-actions {
+    margin-top: 0.75rem;
+}
+
+.review-actions button {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.8125rem;
+    cursor: pointer;
+}
+
+.review-actions button:hover {
+    color: var(--danger);
+}
+
+.no-reviews {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-muted);
+}
+
+@media (min-width: 768px) {
+    .book-layout {
+        grid-template-columns: 280px 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .book-page { padding: 1.5rem 1rem; }
+    .book-cover img { max-width: 200px; }
+    .book-info { text-align: center; }
+    .book-actions { justify-content: center; }
+    .reviews-header { flex-direction: column; gap: 1rem; align-items: flex-start; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="book-page">
+    <a href="/catalog" class="back-link" data-testid="back-to-catalog">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+        Volver al catálogo
+    </a>
+    
+    <div class="book-layout">
+        <div class="book-cover">
+            <span class="premium-tag" id="premiumTag" style="display:none;">PREMIUM</span>
+            <img id="cover" src="" alt="Portada del libro" data-testid="book-cover">
+        </div>
+        <div class="book-info">
+            <h1 id="title" data-testid="book-title">Cargando...</h1>
+            <p class="book-author" id="author" data-testid="book-author"></p>
+            
+            <div class="book-rating" id="bookRating" style="display:none;">
+                <span class="stars" id="ratingStars"></span>
+                <span class="rating-text" id="ratingText"></span>
+            </div>
+            
+            <div class="book-meta" id="formatBadges"></div>
+            <p class="book-desc" id="description" data-testid="book-description"></p>
+            
+            <div class="book-actions">
+                <button class="btn btn-primary read-btn" id="readBtn" data-testid="read-button">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                    </svg>
+                    Leer Ahora
+                </button>
+                <button class="btn buy-btn" id="buyBtn" style="display:none;" data-testid="buy-button">
+                    Comprar por $<span id="bookPrice">0</span>
+                </button>
+                <div id="paypalContainer" style="display:none; flex: 1; min-width: 200px;">
+                    <div id="paypal-button-container"></div>
+                    <button class="btn btn-secondary" onclick="document.getElementById('paypalContainer').style.display='none'; document.getElementById('buyBtn').style.display='block';" style="width: 100%; margin-top: 0.5rem;">
+                        Cancelar
+                    </button>
+                </div>
+                <button class="btn btn-outline fav-btn" id="favBtn" data-testid="favorite-button" title="Agregar a favoritos">
+                    ♡
+                </button>
+            </div>
+            
+            <div class="progress-bar" id="progressBar" style="display:none;">
+                <h4>Tu progreso</h4>
+                <div class="progress-track">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-text">
+                    <span id="progressPage">Página 1 de 1</span>
+                    <span id="progressPercent">0%</span>
+                </div>
+            </div>
+            
+            <div class="guest-warning" id="warning" style="display:none;" data-testid="guest-warning">
+                Invitados: límite de 1 libro gratis. <a href="/register">Regístrate</a> para acceso ilimitado.
+            </div>
+        </div>
+    </div>
+    
+    <!-- Reviews Section -->
+    <section class="reviews-section">
+        <div class="reviews-header">
+            <h2>Reseñas</h2>
+            <button class="btn btn-outline write-review-btn" id="writeReviewBtn" onclick="showReviewForm()" data-testid="write-review-btn">
+                Escribir reseña
+            </button>
+        </div>
+        
+        <!-- Review Form -->
+        <div class="review-form" id="reviewForm" style="display:none;">
+            <label style="display:block; margin-bottom: 0.5rem; font-weight: 500;">Tu calificación</label>
+            <div class="rating-input" id="ratingInput">
+                <button onclick="setRating(1)" data-rating="1">☆</button>
+                <button onclick="setRating(2)" data-rating="2">☆</button>
+                <button onclick="setRating(3)" data-rating="3">☆</button>
+                <button onclick="setRating(4)" data-rating="4">☆</button>
+                <button onclick="setRating(5)" data-rating="5">☆</button>
+            </div>
+            <textarea id="reviewComment" placeholder="Escribe tu opinión sobre este libro..." data-testid="review-comment"></textarea>
+            <div class="review-form-actions">
+                <button class="btn btn-secondary" onclick="hideReviewForm()">Cancelar</button>
+                <button class="btn btn-primary" onclick="submitReview()" data-testid="submit-review">Publicar reseña</button>
+            </div>
+        </div>
+        
+        <!-- Reviews List -->
+        <div id="reviewsList"></div>
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const bookId = '{{ book_id }}';
+let isLoggedIn = false;
+let isFavorited = false;
+let currentUserId = null;
+let selectedRating = 5;
+let bookData = null;
+
+function convertDriveImageUrl(url) {
+    if (!url) return url;
+    const match = url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
+    return match ? `https://lh3.googleusercontent.com/d/${match[1]}` : url;
+}
+
+function renderStars(rating) {
+    let html = '';
+    for (let i = 1; i <= 5; i++) {
+        html += i <= rating ? '★' : '☆';
+    }
+    return html;
+}
+
+async function loadBook() {
+    try {
+        const res = await fetch(`/api/books/${bookId}`, { credentials: 'include' });
+        bookData = await res.json();
+        
+        document.getElementById('cover').src = convertDriveImageUrl(bookData.coverUrl) || PLACEHOLDER_IMG;
+        document.getElementById('title').textContent = bookData.title;
+        document.getElementById('author').textContent = bookData.author;
+        document.getElementById('description').textContent = bookData.description || 'Sin descripción disponible.';
+        document.title = bookData.title + ' - Biblioteca Virtual';
+
+        // Premium: el backend nos dice si el usuario tiene acceso
+        // (por compra individual, por suscripcion activa o por ser admin).
+        if (bookData.isPremium) {
+            document.getElementById('premiumTag').style.display = 'block';
+            document.getElementById('bookPrice').textContent = bookData.price || 0;
+
+            // userHasAccess lo define get_book() en el backend:
+            //   userHasAccess = hasSubscription || userHasPurchased || isAdmin
+            const hasAccess = bookData.userHasAccess === true
+                           || bookData.hasSubscription === true
+                           || bookData.userHasPurchased === true;
+
+            if (hasAccess) {
+                document.getElementById('buyBtn').style.display = 'none';
+                document.getElementById('readBtn').style.display = 'block';
+                if (bookData.hasSubscription) {
+                    document.getElementById('readBtn').title = 'Incluido en tu suscripcion premium';
+                }
+            } else {
+                document.getElementById('buyBtn').style.display = 'block';
+                document.getElementById('readBtn').style.display = 'none';
+            }
+        }
+
+        // Rating
+        if (bookData.averageRating > 0) {
+            document.getElementById('bookRating').style.display = 'flex';
+            document.getElementById('ratingStars').textContent = renderStars(Math.round(bookData.averageRating));
+            document.getElementById('ratingText').textContent = `${bookData.averageRating} (${bookData.totalReviews} reseñas)`;
+        }
+
+        // Badges
+        let badges = '';
+        if (bookData.pdfUrl) badges += '<span class="badge">PDF</span>';
+        if (bookData.content) badges += '<span class="badge">Texto</span>';
+        if (bookData.isPremium) badges += `<span class="badge" style="background: rgba(245, 158, 11, 0.1); color: #d97706;">$${bookData.price}</span>`;
+        document.getElementById('formatBadges').innerHTML = badges;
+
+        // Auth check
+        const authRes = await fetch('/api/auth/me');
+        if (authRes.ok) {
+            const userData = await authRes.json();
+            isLoggedIn = true;
+            currentUserId = userData.id;
+            loadFavoriteStatus();
+            loadProgress();
+        } else {
+            document.getElementById('warning').style.display = 'block';
+            document.getElementById('favBtn').style.display = 'none';
+            document.getElementById('writeReviewBtn').style.display = 'none';
+        }
+        
+        loadReviews();
+    } catch (e) {
+        console.error('Error loading book:', e);
+    }
+}
+
+async function loadFavoriteStatus() {
+    try {
+        const res = await fetch(`/api/favorites/${bookId}`);
+        const data = await res.json();
+        isFavorited = data.favorited;
+        updateFavButton();
+    } catch (e) {
+        console.error('Error checking favorite:', e);
+    }
+}
+
+async function loadProgress() {
+    try {
+        const res = await fetch(`/api/progress/${bookId}`, {
+            credentials: 'include'
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        
+        if (data.percentage > 0) {
+            document.getElementById('progressBar').style.display = 'block';
+            document.getElementById('progressFill').style.width = data.percentage + '%';
+            document.getElementById('progressPage').textContent = `Página ${data.currentPage} de ${data.totalPages}`;
+            document.getElementById('progressPercent').textContent = Math.round(data.percentage) + '%';
+            
+            document.getElementById('readBtn').innerHTML = `
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                </svg>
+                Continuar Leyendo
+            `;
+        }
+    } catch (e) {
+        console.error('Error loading progress:', e);
+    }
+}
+
+function updateFavButton() {
+    const btn = document.getElementById('favBtn');
+    if (isFavorited) {
+        btn.innerHTML = '♥';
+        btn.classList.add('active');
+        btn.title = 'Quitar de favoritos';
+    } else {
+        btn.innerHTML = '♡';
+        btn.classList.remove('active');
+        btn.title = 'Agregar a favoritos';
+    }
+}
+
+document.getElementById('favBtn').addEventListener('click', async () => {
+    if (!isLoggedIn) {
+        alert('Inicia sesión para guardar favoritos');
+        return;
+    }
+    
+    try {
+        const res = await fetch(`/api/favorites/${bookId}/toggle`, { method: 'POST' });
+        const data = await res.json();
+        isFavorited = data.favorited;
+        updateFavButton();
+    } catch (e) {
+        console.error('Error toggling favorite:', e);
+    }
+});
+
+document.getElementById('readBtn').addEventListener('click', async () => {
+    try {
+        const res = await fetch(`/api/books/${bookId}/read`, { method: 'POST' });
+        const data = await res.json();
+        if (data.allowed) {
+            location.href = `/reader/${bookId}`;
+        } else {
+            if (data.isPremium) {
+                // Si es premium y no tiene acceso, ofrecer tanto suscripcion
+                // como compra individual en lugar de solo mostrar precio.
+                const msg = `Este libro es premium.\n\n`
+                          + `Opciones:\n`
+                          + `  1) Suscribete por $3.99/mes y accede a TODOS los libros premium\n`
+                          + `  2) Comprar solo este libro por $${data.price}\n\n`
+                          + `Pulsa Aceptar para ir a Suscripcion, o Cancelar para comprar solo este libro.`;
+                if (confirm(msg)) {
+                    location.href = '/subscription';
+                } else {
+                    // Mostrar boton de compra
+                    document.getElementById('buyBtn').style.display = 'block';
+                    document.getElementById('buyBtn').scrollIntoView({behavior:'smooth'});
+                }
+            } else {
+                alert(data.message);
+            }
+        }
+    } catch (e) {
+        console.error('Error:', e);
+    }
+});
+
+document.getElementById('buyBtn').addEventListener('click', async () => {
+    if (!isLoggedIn) {
+        alert('Inicia sesión para comprar');
+        location.href = '/login';
+        return;
+    }
+    
+    // Mostrar el contenedor de PayPal
+    document.getElementById('paypalContainer').style.display = 'block';
+    document.getElementById('buyBtn').style.display = 'none';
+});
+
+// Inicializar PayPal
+function initPayPal() {
+    if (typeof paypal === 'undefined') return;
+    
+    paypal.Buttons({
+        style: {
+            layout: 'vertical',
+            color: 'gold',
+            shape: 'rect',
+            label: 'paypal'
+        },
+        createOrder: function(data, actions) {
+            return actions.order.create({
+                purchase_units: [{
+                    description: bookData.title,
+                    amount: {
+                        value: bookData.price.toFixed(2),
+                        currency_code: 'USD'
+                    }
+                }]
+            });
+        },
+        onApprove: async function(data, actions) {
+            try {
+                const details = await actions.order.capture();
+                
+                // Registrar la compra en nuestro backend
+                const res = await fetch(`/api/books/${bookId}/purchase`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        paymentId: details.id,
+                        payerEmail: details.payer.email_address
+                    })
+                });
+                
+                if (res.ok) {
+                    alert('¡Compra exitosa! Ahora puedes leer el libro.');
+                    document.getElementById('paypalContainer').style.display = 'none';
+                    document.getElementById('readBtn').style.display = 'block';
+                    document.getElementById('readBtn').innerHTML = `
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                        </svg>
+                        Leer Ahora
+                    `;
+                } else {
+                    alert('Error al registrar la compra. Contacta soporte.');
+                }
+            } catch (err) {
+                console.error('Error procesando pago:', err);
+                alert('Error al procesar el pago');
+            }
+        },
+        onCancel: function() {
+            document.getElementById('paypalContainer').style.display = 'none';
+            document.getElementById('buyBtn').style.display = 'block';
+        },
+        onError: function(err) {
+            console.error('PayPal error:', err);
+            alert('Error con PayPal. Intenta de nuevo.');
+        }
+    }).render('#paypal-button-container');
+}
+
+// ==================== RESEÑAS ====================
+
+async function loadReviews() {
+    try {
+        const res = await fetch(`/api/reviews/${bookId}`);
+        const data = await res.json();
+        
+        const container = document.getElementById('reviewsList');
+        
+        if (data.reviews.length === 0) {
+            container.innerHTML = '<div class="no-reviews"><p>No hay reseñas aún. ¡Sé el primero en opinar!</p></div>';
+            return;
+        }
+        
+        container.innerHTML = data.reviews.map(r => `
+            <div class="review-item" data-review-id="${r.id}">
+                <div class="review-header">
+                    <div class="reviewer-info">
+                        <h4>${escapeHtml(r.userName)}</h4>
+                        <span class="stars">${renderStars(r.rating)}</span>
+                    </div>
+                    <span class="review-date">${formatDate(r.createdAt)}</span>
+                </div>
+                <p class="review-text">${escapeHtml(r.comment) || '<em>Sin comentario</em>'}</p>
+                ${r.userId === currentUserId ? `
+                    <div class="review-actions">
+                        <button onclick="deleteReview()">Eliminar mi reseña</button>
+                    </div>
+                ` : ''}
+            </div>
+        `).join('');
+    } catch (e) {
+        console.error('Error loading reviews:', e);
+    }
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+function formatDate(dateStr) {
+    if (!dateStr) return '';
+    return new Date(dateStr).toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+}
+
+function showReviewForm() {
+    if (!isLoggedIn) {
+        alert('Inicia sesión para escribir una reseña');
+        location.href = '/login';
+        return;
+    }
+    document.getElementById('reviewForm').style.display = 'block';
+    document.getElementById('writeReviewBtn').style.display = 'none';
+}
+
+function hideReviewForm() {
+    document.getElementById('reviewForm').style.display = 'none';
+    document.getElementById('writeReviewBtn').style.display = 'block';
+}
+
+function setRating(rating) {
+    selectedRating = rating;
+    const buttons = document.querySelectorAll('#ratingInput button');
+    buttons.forEach((btn, i) => {
+        btn.classList.toggle('active', i < rating);
+        btn.textContent = i < rating ? '★' : '☆';
+    });
+}
+
+async function submitReview() {
+    const comment = document.getElementById('reviewComment').value.trim();
+    
+    try {
+        const res = await fetch(`/api/reviews/${bookId}/create`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rating: selectedRating, comment })
+        });
+        
+        if (res.ok) {
+            hideReviewForm();
+            document.getElementById('reviewComment').value = '';
+            setRating(5);
+            loadReviews();
+            loadBook(); // Refresh rating
+        } else {
+            const data = await res.json();
+            alert(data.error || 'Error al publicar reseña');
+        }
+    } catch (e) {
+        console.error('Error submitting review:', e);
+        alert('Error al publicar reseña');
+    }
+}
+
+async function deleteReview() {
+    if (!confirm('¿Eliminar tu reseña?')) return;
+    
+    try {
+        await fetch(`/api/reviews/${bookId}/delete`, { method: 'DELETE' });
+        loadReviews();
+        loadBook();
+    } catch (e) {
+        console.error('Error deleting review:', e);
+    }
+}
+
+// Init rating
+setRating(5);
+loadBook();
+</script>
+<!-- PayPal SDK -->
+{% if PAYPAL_CLIENT_ID %}
+<script src="https://www.paypal.com/sdk/js?client-id={{ PAYPAL_CLIENT_ID }}&currency={{ PAYPAL_CURRENCY|default:'USD' }}"></script>
+{% endif %}
+<script>
+// Inicializar PayPal cuando el SDK esté listo
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(initPayPal, 1000);
+});
+</script>
+{% endblock %}

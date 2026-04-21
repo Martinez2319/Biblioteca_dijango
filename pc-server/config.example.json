@@ -1,0 +1,7 @@
+{
+  "serverUrl": "https://tu-biblioteca.com",
+  "apiKey": "MiBiblioteca2024SecretKey_AbCdEfGh",
+  "booksFolder": "C:\\MisLibros",
+  "localPort": 3001,
+  "pcName": "Mi PC"
+}

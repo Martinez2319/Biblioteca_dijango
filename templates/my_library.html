@@ -1,0 +1,326 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+.library-page {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+}
+
+.library-header {
+    margin-bottom: 2rem;
+}
+
+.library-header h1 {
+    margin-bottom: 0.5rem;
+}
+
+.library-header p {
+    color: var(--text-muted);
+}
+
+.library-section {
+    margin-bottom: 3rem;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.section-title {
+    font-size: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.books-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 1.25rem;
+}
+
+.book-card-mini {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.book-card-mini:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-md);
+}
+
+.book-card-mini img {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+    background: var(--bg-tertiary);
+}
+
+.book-card-mini-content {
+    padding: 0.75rem;
+}
+
+.book-card-mini h4 {
+    font-size: 0.875rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 0.25rem;
+}
+
+.book-card-mini p {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+.progress-mini {
+    height: 4px;
+    background: var(--border-color);
+    border-radius: 2px;
+    margin-top: 0.5rem;
+    overflow: hidden;
+}
+
+.progress-mini-fill {
+    height: 100%;
+    background: var(--accent-primary);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: var(--text-muted);
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-lg);
+    grid-column: 1 / -1;
+}
+
+.empty-state svg {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.clear-btn {
+    font-size: 0.8125rem;
+    padding: 0.5rem 1rem;
+}
+
+@media (max-width: 768px) {
+    .library-page {
+        padding: 1.5rem 1rem;
+    }
+    
+    .books-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="library-page">
+    <div class="library-header">
+        <h1>Mi Biblioteca</h1>
+        <p>Tu progreso, favoritos e historial de lectura</p>
+    </div>
+
+    <!-- Continuar Leyendo -->
+    <section class="library-section">
+        <div class="section-header">
+            <h2 class="section-title">📖 Continuar Leyendo</h2>
+        </div>
+        <div class="books-grid" id="continueReading"></div>
+    </section>
+
+    <!-- Favoritos -->
+    <section class="library-section">
+        <div class="section-header">
+            <h2 class="section-title">❤️ Mis Favoritos</h2>
+        </div>
+        <div class="books-grid" id="favorites"></div>
+    </section>
+
+    <!-- Historial -->
+    <section class="library-section">
+        <div class="section-header">
+            <h2 class="section-title">🕐 Historial</h2>
+            <button class="btn btn-outline clear-btn" onclick="clearHistory()" data-testid="clear-history">Limpiar</button>
+        </div>
+        <div class="books-grid" id="history"></div>
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function getBookCover(coverUrl) {
+    // Manejar diferentes tipos de URLs
+    if (!coverUrl) return PLACEHOLDER_IMG;
+    
+    // Si es una URL local file:///, usar placeholder
+    if (coverUrl.startsWith('file:///')) {
+        return PLACEHOLDER_IMG;
+    }
+    
+    // Si es remote:, ya debería estar convertida por el backend
+    if (coverUrl.startsWith('/api/remote/')) {
+        return coverUrl;
+    }
+    
+    // Google Drive
+    if (coverUrl.includes('drive.google.com')) {
+        const match = coverUrl.match(/drive\.google\.com\/file\/d\/([^/]+)/);
+        if (match) return `https://lh3.googleusercontent.com/d/${match[1]}`;
+    }
+    
+    return coverUrl;
+}
+
+function renderBookCardMini(book, showProgress = false) {
+    // Obtener el ID del libro (puede venir como id, _id o bookId)
+    const bookId = book.bookId || book.id || book._id;
+    const cover = getBookCover(book.coverUrl);
+    
+    let progressHtml = '';
+    if (showProgress && book.percentage > 0) {
+        progressHtml = `
+            <div class="progress-mini">
+                <div class="progress-mini-fill" style="width: ${book.percentage}%"></div>
+            </div>
+            <p style="margin-top: 0.25rem;">${book.percentage}% completado</p>
+        `;
+    }
+    
+    return `
+        <div class="book-card-mini" onclick="location.href='/book/${bookId}'" data-testid="book-${bookId}">
+            <img src="${cover}" alt="${escapeHtml(book.title)}" loading="lazy" onerror="this.src='${PLACEHOLDER_IMG}'">
+            <div class="book-card-mini-content">
+                <h4>${escapeHtml(book.title)}</h4>
+                <p>${escapeHtml(book.author)}</p>
+                ${progressHtml}
+            </div>
+        </div>
+    `;
+}
+
+function renderEmpty(message) {
+    return `
+        <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+            </svg>
+            <p>${message}</p>
+        </div>
+    `;
+}
+
+async function loadContinueReading() {
+    const container = document.getElementById('continueReading');
+    try {
+        const res = await fetch('/api/progress');
+        if (!res.ok) throw new Error('Error loading progress');
+        
+        const data = await res.json();
+        const inProgress = data.filter(b => b.percentage > 0 && b.percentage < 100);
+        
+        if (inProgress.length === 0) {
+            container.innerHTML = renderEmpty('No tienes libros en progreso');
+        } else {
+            container.innerHTML = inProgress.map(b => renderBookCardMini(b, true)).join('');
+        }
+    } catch (e) {
+        console.error('Error loading progress:', e);
+        container.innerHTML = renderEmpty('Error al cargar el progreso');
+    }
+}
+
+async function loadFavorites() {
+    const container = document.getElementById('favorites');
+    try {
+        const res = await fetch('/api/favorites');
+        if (!res.ok) throw new Error('Error loading favorites');
+        
+        const data = await res.json();
+        console.log('Favorites data:', data); // Debug
+        
+        if (!data || data.length === 0) {
+            container.innerHTML = renderEmpty('No tienes favoritos aún. Explora el catálogo y agrega libros.');
+        } else {
+            container.innerHTML = data.map(b => renderBookCardMini(b)).join('');
+        }
+    } catch (e) {
+        console.error('Error loading favorites:', e);
+        container.innerHTML = renderEmpty('Error al cargar favoritos');
+    }
+}
+
+async function loadHistory() {
+    const container = document.getElementById('history');
+    try {
+        const res = await fetch('/api/history');
+        if (!res.ok) throw new Error('Error loading history');
+        
+        const data = await res.json();
+        console.log('History data:', data); // Debug
+        
+        if (!data || data.length === 0) {
+            container.innerHTML = renderEmpty('Tu historial está vacío');
+        } else {
+            container.innerHTML = data.map(b => renderBookCardMini(b)).join('');
+        }
+    } catch (e) {
+        console.error('Error loading history:', e);
+        container.innerHTML = renderEmpty('Error al cargar historial');
+    }
+}
+
+async function clearHistory() {
+    if (!confirm('¿Eliminar todo el historial?')) return;
+    
+    try {
+        await fetch('/api/history/clear', { method: 'DELETE' });
+        loadHistory();
+    } catch (e) {
+        console.error('Error clearing history:', e);
+    }
+}
+
+// Verificar auth y cargar datos
+async function init() {
+    try {
+        const res = await fetch('/api/auth/me');
+        if (!res.ok) {
+            location.href = '/login';
+            return;
+        }
+        
+        // Cargar todas las secciones
+        await Promise.all([
+            loadContinueReading(),
+            loadFavorites(),
+            loadHistory()
+        ]);
+    } catch (e) {
+        console.error('Error initializing:', e);
+        location.href = '/login';
+    }
+}
+
+init();
+</script>
+{% endblock %}

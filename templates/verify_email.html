@@ -1,0 +1,120 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% include '_seo_head.html' %}
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
+    <style>
+        .verify-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+        
+        .verify-card {
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+            padding: 3rem 2rem;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .verify-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 1.5rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+        }
+        
+        .verify-icon.success { background: rgba(16, 185, 129, 0.1); }
+        .verify-icon.error { background: rgba(239, 68, 68, 0.1); }
+        .verify-icon.loading { background: var(--bg-tertiary); }
+        
+        .verify-card h1 {
+            font-size: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .verify-card p {
+            color: var(--text-muted);
+            margin-bottom: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="verify-container">
+        <div class="verify-card">
+            <div class="verify-icon loading" id="icon">⏳</div>
+            <h1 id="title">Verificando...</h1>
+            <p id="message">Por favor espera mientras verificamos tu email.</p>
+            <a href="/" class="btn btn-primary" id="actionBtn" style="display:none;">Ir al inicio</a>
+        </div>
+    </div>
+    
+    <script>
+        const saved = localStorage.getItem('theme');
+        if (saved) document.documentElement.setAttribute('data-theme', saved);
+        
+        async function verifyEmail() {
+            const params = new URLSearchParams(window.location.search);
+            const token = params.get('token');
+            
+            if (!token) {
+                showError('Token no proporcionado');
+                return;
+            }
+            
+            try {
+                const res = await fetch('/api/auth/verify-email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token })
+                });
+                
+                const data = await res.json();
+                
+                if (res.ok) {
+                    showSuccess(data.message || 'Email verificado correctamente');
+                } else {
+                    showError(data.error || 'Error al verificar email');
+                }
+            } catch (e) {
+                showError('Error de conexión');
+            }
+        }
+        
+        function showSuccess(message) {
+            document.getElementById('icon').className = 'verify-icon success';
+            document.getElementById('icon').textContent = '✓';
+            document.getElementById('title').textContent = '¡Verificado!';
+            document.getElementById('message').textContent = message;
+            document.getElementById('actionBtn').style.display = 'inline-flex';
+            document.getElementById('actionBtn').textContent = 'Ir al inicio';
+            document.getElementById('actionBtn').href = '/';
+        }
+        
+        function showError(message) {
+            document.getElementById('icon').className = 'verify-icon error';
+            document.getElementById('icon').textContent = '✗';
+            document.getElementById('title').textContent = 'Error';
+            document.getElementById('message').textContent = message;
+            document.getElementById('actionBtn').style.display = 'inline-flex';
+            document.getElementById('actionBtn').textContent = 'Volver al inicio';
+            document.getElementById('actionBtn').href = '/';
+        }
+        
+        verifyEmail();
+    </script>
+</body>
+</html>

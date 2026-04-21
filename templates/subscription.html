@@ -1,0 +1,367 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+.subscription-page {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 3rem 1.5rem;
+}
+.subscription-header { text-align: center; margin-bottom: 3rem; }
+.subscription-header h1 { margin-bottom: 1rem; }
+.subscription-header p { color: var(--text-secondary); font-size: 1.125rem; }
+
+.plans-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2rem;
+    margin-bottom: 3rem;
+}
+.plan-card {
+    background: var(--bg-secondary);
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    padding: 2rem;
+    text-align: center;
+    transition: all 0.3s;
+    position: relative;
+}
+.plan-card:hover { border-color: var(--accent-primary); transform: translateY(-4px); }
+.plan-card.popular { border-color: var(--accent-primary); }
+.plan-card.popular::before {
+    content: 'MÁS POPULAR';
+    position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+    background: var(--accent-primary); color: white;
+    padding: 0.25rem 1rem; border-radius: 20px;
+    font-size: 0.75rem; font-weight: 700;
+}
+.plan-name { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem; }
+.plan-price { font-size: 3rem; font-weight: 700; color: var(--accent-primary); }
+.plan-price span { font-size: 1rem; color: var(--text-muted); font-weight: 400; }
+.plan-features { list-style: none; margin: 2rem 0; text-align: left; }
+.plan-features li {
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border-color);
+    display: flex; align-items: center; gap: 0.75rem;
+}
+.plan-features li:last-child { border-bottom: none; }
+.plan-features svg { color: var(--success); flex-shrink: 0; }
+
+.current-plan {
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+}
+.current-plan h3 { margin-bottom: 0.5rem; }
+.plan-status { display: flex; align-items: center; gap: 0.5rem; color: var(--success); font-weight: 600; }
+.plan-status.expired { color: var(--danger); }
+
+.sandbox-badge {
+    display: inline-block;
+    background: #fef3c7; color: #92400e;
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-left: 0.5rem;
+}
+
+.benefits-section {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-xl);
+    padding: 2rem;
+}
+.benefits-section h2 { text-align: center; margin-bottom: 2rem; }
+.benefits-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+}
+.benefit-item { text-align: center; padding: 1.5rem; }
+.benefit-icon { font-size: 2.5rem; margin-bottom: 1rem; }
+.benefit-item h4 { margin-bottom: 0.5rem; }
+.benefit-item p { font-size: 0.875rem; color: var(--text-muted); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="subscription-page">
+    <div class="subscription-header">
+        <h1>🌟 Suscripción Premium <span id="modeBadge" class="sandbox-badge" style="display:none;">SANDBOX</span></h1>
+        <p>Accede a todos los libros premium y disfruta de una experiencia de lectura sin límites</p>
+    </div>
+
+    <div class="current-plan" id="currentPlan" style="display:none;">
+        <h3>Tu suscripción actual</h3>
+        <div class="plan-status" id="planStatus">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                <polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+            <span id="planStatusText">Activo</span>
+        </div>
+        <p id="planDetails" style="margin-top: 0.5rem; color: var(--text-secondary);"></p>
+        <button class="btn btn-outline" id="cancelBtn" onclick="cancelSubscription()" style="margin-top: 1rem;">
+            Cancelar suscripción
+        </button>
+    </div>
+
+    <div class="plans-grid" id="plansGrid">
+        <div class="plan-card" id="monthlyPlan">
+            <div class="plan-name">Mensual</div>
+            <div class="plan-price">$<span id="priceMonthly">3.99</span><span>/mes</span></div>
+            <ul class="plan-features">
+                <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Acceso ilimitado a libros premium</li>
+                <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Sin anuncios</li>
+                <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Sincronización en todos tus dispositivos</li>
+            </ul>
+            <button class="btn btn-outline btn-full" id="btnMonthly" onclick="selectPlan('monthly')" data-testid="btn-plan-monthly">
+                Elegir plan mensual
+            </button>
+            <div id="paypalMonthly" style="margin-top: 1rem;"></div>
+        </div>
+
+        <div class="plan-card popular" id="yearlyPlan">
+            <div class="plan-name">Anual</div>
+            <div class="plan-price">$<span id="priceYearly">20.99</span><span>/año</span></div>
+            <p style="color: var(--success); font-weight: 600; margin-bottom: 1rem;">¡Ahorra 2 meses!</p>
+            <ul class="plan-features">
+                <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Acceso ilimitado a libros premium</li>
+                <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Sin anuncios</li>
+                <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Sincronización en todos tus dispositivos</li>
+                <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> 2 meses gratis incluidos</li>
+            </ul>
+            <button class="btn btn-primary btn-full" id="btnYearly" onclick="selectPlan('yearly')" data-testid="btn-plan-yearly">
+                Elegir plan anual
+            </button>
+            <div id="paypalYearly" style="margin-top: 1rem;"></div>
+        </div>
+    </div>
+
+    <div class="benefits-section">
+        <h2>Beneficios Premium</h2>
+        <div class="benefits-grid">
+            <div class="benefit-item"><div class="benefit-icon">📚</div><h4>Biblioteca Completa</h4><p>Accede a todos los libros premium sin límites</p></div>
+            <div class="benefit-item"><div class="benefit-icon">📱</div><h4>Multi-dispositivo</h4><p>Lee en cualquier dispositivo, sincronizado</p></div>
+            <div class="benefit-item"><div class="benefit-icon">📝</div><h4>Notas Ilimitadas</h4><p>Guarda todas tus notas y resaltados</p></div>
+            <div class="benefit-item"><div class="benefit-icon">🚫</div><h4>Sin Anuncios</h4><p>Disfruta de una lectura sin interrupciones</p></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let selectedPlan = null;
+let isLoggedIn = false;
+let paypalReady = false;
+let plans = null;
+let paypalConfig = null;
+
+async function loadConfigAndPlans() {
+    try {
+        // Config de PayPal (clientId + mode sandbox/live del backend)
+        const cfgRes = await fetch('/api/paypal/config', { credentials: 'include' });
+        paypalConfig = await cfgRes.json();
+
+        if (paypalConfig.mode === 'sandbox') {
+            const badge = document.getElementById('modeBadge');
+            if (badge) badge.style.display = 'inline-block';
+        }
+
+        // Planes con precios oficiales desde el backend
+        const plansRes = await fetch('/api/subscriptions/plans', { credentials: 'include' });
+        plans = await plansRes.json();
+
+        if (plans.monthly) document.getElementById('priceMonthly').textContent = plans.monthly.price.toFixed(2);
+        if (plans.yearly)  document.getElementById('priceYearly').textContent  = plans.yearly.price.toFixed(2);
+    } catch (e) {
+        console.error('Error cargando config:', e);
+    }
+}
+
+function loadPaypalSdk() {
+    return new Promise((resolve, reject) => {
+        if (paypalReady) return resolve(true);
+        if (!paypalConfig || !paypalConfig.clientId) {
+            return reject(new Error('Falta PAYPAL_CLIENT_ID en el servidor'));
+        }
+        const script = document.createElement('script');
+        const currency = paypalConfig.currency || 'USD';
+        // Intent=capture + components=buttons (SDK del checkout estándar)
+        script.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(paypalConfig.clientId)}&currency=${currency}&intent=capture&components=buttons`;
+        script.onload = () => { paypalReady = true; resolve(true); };
+        script.onerror = () => reject(new Error('No se pudo cargar el SDK de PayPal'));
+        document.head.appendChild(script);
+    });
+}
+
+// IMPORTANTE: no llamar a esta funcion "checkAuth" porque sobrescribe la
+// funcion global definida en /static/js/common.js, que es la que actualiza
+// la navbar (nombre de usuario, menu, etc). Si la pisamos, en esta pagina
+// no aparece el usuario logueado como en el resto de los templates.
+async function checkSubscriptionAuth() {
+    try {
+        const res = await fetch('/api/auth/me', { credentials: 'include' });
+        isLoggedIn = res.ok;
+        if (isLoggedIn) {
+            checkCurrentSubscription();
+        } else {
+            // Diagnostico visible para saber por que no reconoce la sesion
+            showSessionDiagnostic(res.status);
+        }
+    } catch (e) {
+        isLoggedIn = false;
+        showSessionDiagnostic('network-error: ' + e.message);
+    }
+}
+
+async function showSessionDiagnostic(meStatus) {
+    try {
+        const dbg = await fetch('/api/debug/session', { credentials: 'include' });
+        const info = await dbg.json();
+        const container = document.querySelector('.subscription-page');
+        if (!container) return;
+        const panel = document.createElement('div');
+        panel.style.cssText = 'margin:1rem 0;padding:1rem;background:#fff3cd;border:1px solid #f59e0b;border-radius:8px;font-size:13px;color:#78350f;';
+        panel.innerHTML = `
+            <strong>Sesion no detectada.</strong><br>
+            <code style="display:block;margin-top:0.5rem;white-space:pre-wrap;font-size:11px;background:#fef3c7;padding:0.5rem;border-radius:4px;">
+/api/auth/me     -> ${meStatus}
+Host             -> ${info.host}
+Cookie 'token'   -> ${info.has_cookie_token ? 'SI (' + info.cookie_token_preview + ')' : 'NO'}
+Todas cookies    -> ${info.all_cookies.length ? info.all_cookies.join(', ') : 'NINGUNA'}
+Token valido     -> ${info.token_verified_user_id || 'NO'}
+User cargado     -> ${info.request_user_data ? info.request_user_data.name : 'ninguno'}
+            </code>
+            <p style="margin-top:0.5rem;">
+                <a href="/login" style="color:#92400e;font-weight:600;">Iniciar sesion</a>
+            </p>
+        `;
+        container.prepend(panel);
+    } catch (_) {}
+}
+
+async function checkCurrentSubscription() {
+    try {
+        const res = await fetch('/api/subscriptions/current', { credentials: 'include' });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.active && data.subscription) {
+            document.getElementById('currentPlan').style.display = 'block';
+            document.getElementById('planStatusText').textContent = 'Activo - ' + data.subscription.planName;
+            const exp = new Date(data.subscription.expiresAt);
+            document.getElementById('planDetails').textContent =
+                `Expira: ${exp.toLocaleDateString('es-ES', {year:'numeric', month:'long', day:'numeric'})}`;
+        }
+    } catch (e) {
+        console.error('Error checking subscription:', e);
+    }
+}
+
+async function selectPlan(plan) {
+    if (!isLoggedIn) {
+        alert('Inicia sesión para suscribirte');
+        location.href = '/login';
+        return;
+    }
+
+    if (!plans || !plans[plan]) {
+        alert('Planes no disponibles aún. Recarga la página.');
+        return;
+    }
+
+    selectedPlan = plan;
+    const price = plans[plan].price;
+    const containerId = plan === 'monthly' ? 'paypalMonthly' : 'paypalYearly';
+    const container = document.getElementById(containerId);
+    container.innerHTML = '<p style="text-align:center;color:var(--text-muted);">Cargando PayPal...</p>';
+
+    try {
+        await loadPaypalSdk();
+    } catch (e) {
+        container.innerHTML = `<p style="color:var(--danger);">${e.message}</p>`;
+        return;
+    }
+
+    container.innerHTML = '';
+
+    window.paypal.Buttons({
+        style: { layout: 'vertical', color: 'gold', shape: 'rect', label: 'paypal' },
+        createOrder: function(data, actions) {
+            return actions.order.create({
+                intent: 'CAPTURE',
+                purchase_units: [{
+                    description: plans[plan].name,
+                    amount: { value: price.toFixed(2), currency_code: paypalConfig.currency || 'USD' }
+                }]
+            });
+        },
+        onApprove: async function(data, actions) {
+            try {
+                const details = await actions.order.capture();
+                const res = await fetch('/api/subscriptions/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        plan: selectedPlan,
+                        paymentId: details.id
+                    })
+                });
+
+                let payload = null;
+                try { payload = await res.json(); } catch(_) {}
+
+                if (res.ok && payload && payload.success) {
+                    alert('¡Suscripción activada! Ya tienes acceso premium a todos los libros.');
+                    location.reload();
+                } else {
+                    const msg = payload && payload.error ? payload.error : `HTTP ${res.status}`;
+                    console.error('Error creando suscripción:', msg, payload);
+                    alert('Error al activar suscripción: ' + msg);
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Error procesando el pago: ' + err.message);
+            }
+        },
+        onError: function(err) {
+            console.error('PayPal error:', err);
+            alert('Error de PayPal. Revisa la consola.');
+        },
+        onCancel: function() {
+            alert('Pago cancelado');
+        }
+    }).render(`#${containerId}`);
+}
+
+async function cancelSubscription() {
+    if (!confirm('¿Cancelar tu suscripción? Seguirás teniendo acceso hasta la fecha de expiración.')) return;
+    try {
+        const res = await fetch('/api/subscriptions/cancel', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok) {
+            alert(data.message || 'Suscripción cancelada');
+            location.reload();
+        } else {
+            alert('Error: ' + (data.error || res.status));
+        }
+    } catch (e) {
+        console.error('Error:', e);
+        alert('Error de red: ' + e.message);
+    }
+}
+
+(async function init() {
+    await loadConfigAndPlans();
+    await checkSubscriptionAuth();
+})();
+</script>
+{% endblock %}
